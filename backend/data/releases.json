@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "account_name": "ALTICE",
+    "release_date": "2025-10-01",
+    "executor": "Vibek Mandal",
+    "status": "Scheduled",
+    "notes": "",
+    "release_version": "R25.05",
+    "created_at": "2025-09-30T13:50:51.747Z",
+    "updated_at": "2025-09-30T13:50:51.747Z"
+  },
+  {
+    "id": 2,
+    "account_name": "PLDT",
+    "release_date": "2025-10-10",
+    "executor": "Rohit",
+    "status": "Scheduled",
+    "notes": "Need to enable m2a\nHave basics check done\nMan\n'alds\n;sld\n\njkfgkdjfhjkghdfjg\nlkdfg",
+    "release_version": "R26.09",
+    "created_at": "2025-09-30T14:24:31.706Z",
+    "updated_at": "2025-09-30T17:57:00.412Z"
+  }
+]
