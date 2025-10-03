@@ -154,10 +154,10 @@ app.get("/api/regions", async (req, res) => {
   }
 });
 
-// Add new release version
+// Add new release version - UPDATED to support features
 app.post("/api/regions", async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, features = [] } = req.body; // Added features parameter
     const availableReleases = await readAvailableReleases();
 
     // Check if release version already exists
@@ -170,10 +170,19 @@ app.post("/api/regions", async (req, res) => {
     }
 
     const newId = Math.max(...availableReleases.map((r) => r.id), 0) + 1;
+    
+    // Process features to ensure they have proper IDs
+    const processedFeatures = features.map((feature, index) => ({
+      id: feature.id || Date.now() + index,
+      name: feature.name,
+      description: feature.description,
+    }));
+
     const newRelease = {
       id: newId,
       name: name.toUpperCase(),
       description: description || "",
+      features: processedFeatures, // Added features
       created_at: new Date().toISOString(),
     };
     availableReleases.push(newRelease);
@@ -184,11 +193,11 @@ app.post("/api/regions", async (req, res) => {
   }
 });
 
-// Update release version
+// Update release version - UPDATED to support features
 app.put("/api/regions/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, features = [] } = req.body; // Added features parameter
     const availableReleases = await readAvailableReleases();
     const index = availableReleases.findIndex((r) => r.id === parseInt(id));
 
@@ -209,10 +218,18 @@ app.put("/api/regions/:id", async (req, res) => {
         .json({ error: "Release version name already exists" });
     }
 
+    // Process features to ensure they have proper IDs
+    const processedFeatures = features.map((feature, index) => ({
+      id: feature.id || Date.now() + index,
+      name: feature.name,
+      description: feature.description,
+    }));
+
     availableReleases[index] = {
       ...availableReleases[index],
       name: name.toUpperCase(),
       description: description || "",
+      features: processedFeatures, // Added features
       updated_at: new Date().toISOString(),
     };
 
@@ -510,7 +527,7 @@ app.delete("/api/releases/:id", async (req, res) => {
   }
 });
 
-// Get release statistics
+// Get release statistics - UPDATED to include features count
 app.get("/api/stats", async (req, res) => {
   try {
     const releases = await readReleases();
@@ -521,6 +538,7 @@ app.get("/api/stats", async (req, res) => {
       totalAccounts: accounts.length,
       totalReleases: releases.length,
       totalRegions: availableReleases.length,
+      totalFeatures: availableReleases.reduce((sum, region) => sum + (region.features?.length || 0), 0), // Added features count
       statusCounts: releases.reduce((acc, release) => {
         acc[release.status] = (acc[release.status] || 0) + 1;
         return acc;

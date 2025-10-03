@@ -271,7 +271,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
         </div>
 
         <div className="stat-card performance">
-          <h3>Avg Time (Hour)</h3>
+          <h3>Avg Time(H)</h3>
           <div className="stat-number">{enhancedStats.avgTime}</div>
           {/* <div className="stat-label">Hours per Release</div> */}
         </div>

@@ -3,8 +3,20 @@
     "id": 1,
     "name": "R24.05",
     "description": "Monitoring Upgrade Certification (R24.05 --> R24.09",
-    "features": [],
-    "created_at": "2025-10-03T13:40:32.479Z"
+    "features": [
+      {
+        "id": 1759508414841,
+        "name": "zsgzgs",
+        "description": "fdgfg"
+      },
+      {
+        "id": 1759508421492,
+        "name": "dafgfd",
+        "description": "gdfg"
+      }
+    ],
+    "created_at": "2025-10-03T13:40:32.479Z",
+    "updated_at": "2025-10-03T16:20:23.011Z"
   },
   {
     "id": 2,
@@ -22,6 +34,7 @@
         "description": "Requirements:\n\nSPoG to sort the cycles based on the Cycle Date and Cycle Sequence ID (CR - ACMP-79990)\nOCB will enhance the response of the API and expose the CYCLE DATE (Date/Time when cycle was triggered in OCB)\nSPoG to show cycles as concatenation of Cycle Name, Cycle Code and Cycle Sequence (CR - ACMP-74501)\nRR - R24.09 _ ACMP-81569 - OneOps - OCB SPoG improvement _ RR-20240711_103237-Meeting Recording.mp4\n\nDemo - ACMP R24.09 Sprint _2 ready features demos-20240801_183605-Meeting Recording.mp4 (until min 05:00)\n\nRelease notes - https://confluence/display/RMA/R24.09+-+Monitoring+Release+notes#R24.09MonitoringReleasenotes-OneOps-"
       }
     ],
-    "created_at": "2025-10-03T13:43:38.073Z"
+    "created_at": "2025-10-03T13:43:38.073Z",
+    "updated_at": "2025-10-03T15:56:32.299Z"
   }
 ]

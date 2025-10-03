@@ -145,7 +145,7 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
       {/* Dashboard Header */}
       <div className="dashboard-header">
         <div className="dashboard-title">
-          <h2>🐛 Defects Analytics Dashboard</h2>
+          <h2>Defects Analytics Dashboard</h2>
           <p>Comprehensive view of all defects across completed releases</p>
         </div>
       </div>
@@ -158,11 +158,11 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
           <div className="stat-label">Across All Releases</div>
         </div>
 
-        <div className="stat-card in-progress">
+        {/* <div className="stat-card in-progress">
           <h3>Defect Rate</h3>
           <div className="stat-number">{defectStats.defectRate || 0}</div>
           <div className="stat-label">Defects per Release</div>
-        </div>
+        </div> */}
 
         <div className="stat-card scheduled">
           <h3>Open Defects</h3>

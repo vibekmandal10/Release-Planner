@@ -10,19 +10,11 @@
     "created_at": "2025-10-03T13:44:17.056Z",
     "completion_date": "2025-10-03",
     "time_taken_hours": "3",
-    "defects_raised": "1",
-    "defect_details": "acmp-123: xvcd",
+    "defects_raised": "0",
+    "defect_details": "",
     "completion_notes": "",
-    "defects": [
-      {
-        "id": 1759506828840,
-        "defect_id": "acmp-123",
-        "description": "xvcd",
-        "severity": "Medium",
-        "status": "Open"
-      }
-    ],
-    "updated_at": "2025-10-03T15:53:58.021Z"
+    "defects": [],
+    "updated_at": "2025-10-03T17:47:07.754Z"
   },
   {
     "id": 2,
@@ -38,7 +30,8 @@
     "defects_raised": "0",
     "defect_details": "",
     "completion_notes": "",
-    "defects": []
+    "defects": [],
+    "updated_at": "2025-10-03T17:51:10.559Z"
   },
   {
     "id": 3,
@@ -49,12 +42,71 @@
     "notes": "",
     "release_version": "R24.05",
     "created_at": "2025-10-03T13:45:14.853Z",
-    "updated_at": "2025-10-03T15:51:56.323Z",
+    "updated_at": "2025-10-03T16:21:20.899Z",
+    "completion_date": "2025-10-03",
+    "time_taken_hours": "5",
+    "defects_raised": "1",
+    "defect_details": "zdfgfh-57657: sdgsh",
+    "completion_notes": "",
+    "defects": [
+      {
+        "id": 1759508473592,
+        "defect_id": "zdfgfh-57657",
+        "description": "sdgsh",
+        "severity": "Medium",
+        "status": "Open"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "account_name": "3IR",
+    "release_date": "2025-10-06",
+    "executor": "Rohit",
+    "status": "Scheduled",
+    "notes": "",
+    "release_version": "R24.09",
     "completion_date": null,
     "time_taken_hours": null,
     "defects_raised": "0",
     "defect_details": "",
     "completion_notes": "",
-    "defects": []
+    "defects": [],
+    "created_at": "2025-10-03T16:22:21.313Z",
+    "updated_at": "2025-10-03T16:22:21.313Z"
+  },
+  {
+    "id": 5,
+    "account_name": "3UK",
+    "release_date": "2025-10-08",
+    "executor": "Vibek Mandal",
+    "status": "Blocked",
+    "notes": "Blocked due to space issue Blocked due to space issueBlocked due to space issue Blocked due to space issue Blocked due to space issueBlocked due to space issue Blocked due to space issue Blocked due to space issueBlocked due to space issueBlocked due to space issue Blocked due to space issueBlocked due to space issue\n\\",
+    "release_version": "R24.09",
+    "completion_date": null,
+    "time_taken_hours": null,
+    "defects_raised": "0",
+    "defect_details": "",
+    "completion_notes": "",
+    "defects": [],
+    "created_at": "2025-10-03T16:23:10.273Z",
+    "updated_at": "2025-10-03T17:27:53.356Z"
+  },
+  {
+    "id": 6,
+    "account_name": "3UK",
+    "release_date": "2025-10-03",
+    "executor": "Yachana",
+    "status": "In Progress",
+    "notes": "",
+    "release_version": "R24.05",
+    "completion_date": null,
+    "time_taken_hours": null,
+    "defects_raised": "0",
+    "defect_details": "",
+    "completion_notes": "",
+    "defects": [],
+    "created_at": "2025-10-03T16:24:37.287Z",
+    "updated_at": "2025-10-03T17:51:00.534Z"
   }
 ]

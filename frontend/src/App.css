@@ -2648,3 +2648,23 @@ body {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+.notes-cell {
+  white-space: pre-line; /* respects line breaks from \n */
+  max-width: 250px; /* keep it from being too wide */
+  word-wrap: break-word; /* wrap long words */
+}
+
+.notes-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-cell:hover {
+  white-space: normal;
+  background: #f9f9f9;
+  position: relative;
+  z-index: 1;
+}

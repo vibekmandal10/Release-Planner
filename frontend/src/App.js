@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import ReleaseTable from "./components/ReleaseTable";
+import ViewerReleaseTable from "./components/ViewerReleaseTable";
 import AdminPanel from "./components/AdminPanel";
 import DefectsDashboard from "./components/DefectsDashboard";
 
@@ -148,10 +149,10 @@ function AppContent() {
     const tabs = [{ id: "dashboard", label: "📊 Dashboard", icon: "📊" }];
 
     // All users can view releases
-    tabs.push({ id: "releases", label: "📋 View Releases", icon: "📋 "});
-    
+    tabs.push({ id: "releases", label: "📋 View Releases", icon: "📋 " });
+
     // Add defects dashboard for all users
-    tabs.push({ id: "defects", label: "🐛 Defects Analytics", icon: "🐛" });
+    tabs.push({ id: "defects", label: " 🔷 Defects Analytics", icon: "🐛" });
 
     // Only admins can access admin panel
     if (isAdmin()) {
@@ -174,7 +175,7 @@ function AppContent() {
         );
       case "releases":
         return (
-          <ReleaseTable
+          <ViewerReleaseTable
             releases={filteredReleases}
             regions={regions}
             accounts={accounts}

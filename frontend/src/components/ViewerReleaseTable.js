@@ -167,7 +167,6 @@ const ReleaseTable = ({
             <th>Executor</th>
             <th>Status</th>
             <th>Notes</th>
-            {!readOnly && <th>Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -198,24 +197,6 @@ const ReleaseTable = ({
                   ? `  ${release.completion_notes} `
                   : `${release.notes}`}
               </td>
-              {!readOnly && (
-                <td className="actions-cell">
-                  <button
-                    className="btn btn-sm btn-edit"
-                    onClick={() => onEdit(release)}
-                    title="Edit Release"
-                  >
-                    ✏️ Edit
-                  </button>
-                  <button
-                    className="btn btn-sm btn-delete"
-                    onClick={() => onDelete(release.id)}
-                    title="Delete Release"
-                  >
-                    🗑️ Delete
-                  </button>
-                </td>
-              )}
             </tr>
           ))}
         </tbody>
