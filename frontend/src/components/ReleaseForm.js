@@ -51,7 +51,7 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
               <option value="">Select Release Version</option>
               {regions.map((region) => (
                 <option key={region.id} value={region.name}>
-                  {region.name} - {region.description}
+                  {region.name}
                 </option>
               ))}
             </select>

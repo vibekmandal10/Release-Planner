@@ -13,6 +13,7 @@ function AppContent() {
   const [accounts, setAccounts] = useState([]);
   const [regions, setRegions] = useState([]);
   const [filteredReleases, setFilteredReleases] = useState([]);
+  const [selectedReleaseVersion, setSelectedReleaseVersion] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,6 +26,18 @@ function AppContent() {
   useEffect(() => {
     setFilteredReleases(releases);
   }, [releases]);
+
+  // Filter releases based on selected release version
+  useEffect(() => {
+    if (selectedReleaseVersion) {
+      const filtered = releases.filter(
+        (release) => release.release_version === selectedReleaseVersion
+      );
+      setFilteredReleases(filtered);
+    } else {
+      setFilteredReleases(releases);
+    }
+  }, [selectedReleaseVersion, releases]);
 
   const fetchData = async () => {
     try {
@@ -96,6 +109,14 @@ function AppContent() {
     }
   };
 
+  const handleReleaseVersionChange = (e) => {
+    setSelectedReleaseVersion(e.target.value);
+  };
+
+  const clearReleaseFilter = () => {
+    setSelectedReleaseVersion("");
+  };
+
   // Show login if no user
   if (!user) {
     return <Login />;
@@ -141,9 +162,10 @@ function AppContent() {
       case "dashboard":
         return (
           <Dashboard
-            releases={releases}
+            releases={filteredReleases}
             accounts={accounts}
             regions={regions}
+            selectedReleaseVersion={selectedReleaseVersion}
           />
         );
       case "releases":
@@ -172,9 +194,10 @@ function AppContent() {
       default:
         return (
           <Dashboard
-            releases={releases}
+            releases={filteredReleases}
             accounts={accounts}
             regions={regions}
+            selectedReleaseVersion={selectedReleaseVersion}
           />
         );
     }
@@ -185,7 +208,6 @@ function AppContent() {
       <header className="app-header">
         <div className="header-content">
           <div className="header-left">
-            {/* <h1>🚀 Release Planning System</h1> */}
             <nav className="nav-tabs">
               {getAvailableTabs().map((tab) => (
                 <button
@@ -196,22 +218,48 @@ function AppContent() {
                   {tab.label}
                 </button>
               ))}
-              {/* <label>Release Version:</label>
-              <select
-                name="release_version"
-                value={formData.release_version}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select Release Version</option>
-                {regions.map((region) => (
-                  <option key={region.id} value={region.name}>
-                    {region.name} - {region.description}
-                  </option>
-                ))}
-              </select> */}
             </nav>
           </div>
+
+          {/* <div className="header-center">
+            <div className="navbar-filter">
+              <div className="filter-group">
+                <label>🏷️ Release Version:</label>
+                <select
+                  value={selectedReleaseVersion}
+                  onChange={handleReleaseVersionChange}
+                  className="navbar-select"
+                >
+                  <option value="">All Versions</option>
+                  {Array.from(
+                    new Set(releases.map((r) => r.release_version))
+                  ).map((version) => (
+                    <option key={version} value={version}>
+                      {version}
+                    </option>
+                  ))}
+                </select>
+                {selectedReleaseVersion && (
+                  <button
+                    onClick={clearReleaseFilter}
+                    className="btn btn-clear btn-sm"
+                    title="Clear Release Filter"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {selectedReleaseVersion && (
+                <div className="filter-indicator">
+                  <span className="filter-badge">
+                    📊 {filteredReleases.length} releases for{" "}
+                    {selectedReleaseVersion}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div> */}
+
           <div className="header-right">
             <div className="user-info">
               <span className="user-role">
@@ -226,17 +274,6 @@ function AppContent() {
             </div>
           </div>
         </div>
-        {/* <nav className="nav-tabs">
-          {getAvailableTabs().map((tab) => (
-            <button
-              key={tab.id}
-              className={activeTab === tab.id ? "active" : ""}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav> */}
       </header>
 
       <main className="main-content">{renderContent()}</main>

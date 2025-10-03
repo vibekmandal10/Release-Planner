@@ -3,10 +3,24 @@ import React, { useState, useEffect } from "react";
 const Dashboard = ({ releases, accounts, regions }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedReleaseVersion, setSelectedReleaseVersion] = useState("");
+  const [filteredReleases, setFilteredReleases] = useState(releases);
 
   useEffect(() => {
     fetchStats();
   }, [releases, accounts, regions]);
+
+  useEffect(() => {
+    // Filter releases based on selected release version
+    if (selectedReleaseVersion) {
+      const filtered = releases.filter(
+        (release) => release.release_version === selectedReleaseVersion
+      );
+      setFilteredReleases(filtered);
+    } else {
+      setFilteredReleases(releases);
+    }
+  }, [selectedReleaseVersion, releases]);
 
   const fetchStats = async () => {
     try {
@@ -20,6 +34,14 @@ const Dashboard = ({ releases, accounts, regions }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReleaseVersionChange = (e) => {
+    setSelectedReleaseVersion(e.target.value);
+  };
+
+  const clearFilter = () => {
+    setSelectedReleaseVersion("");
   };
 
   if (loading) {
@@ -82,11 +104,17 @@ const Dashboard = ({ releases, accounts, regions }) => {
     );
   }
 
-  const statusCounts = stats.statusCounts || {};
-  // const upcomingReleases = releases.filter(
-  //   (r) => new Date(r.release_date) >= new Date() && r.status === "Scheduled"
-  // );
-  const upcomingReleases = releases.filter((r) => {
+  // Calculate stats based on filtered releases
+  const getFilteredStatusCounts = () => {
+    return filteredReleases.reduce((acc, release) => {
+      acc[release.status] = (acc[release.status] || 0) + 1;
+      return acc;
+    }, {});
+  };
+
+  const filteredStatusCounts = getFilteredStatusCounts();
+
+  const upcomingReleases = filteredReleases.filter((r) => {
     const d = new Date(r.release_date);
     const today = new Date();
     return (
@@ -96,46 +124,113 @@ const Dashboard = ({ releases, accounts, regions }) => {
     );
   });
 
-  const inProgressReleases = releases.filter((r) => r.status === "In Progress");
-
-  const blockedReleases = releases.filter((r) => r.status === "Blocked");
+  const inProgressReleases = filteredReleases.filter(
+    (r) => r.status === "In Progress"
+  );
+  const blockedReleases = filteredReleases.filter(
+    (r) => r.status === "Blocked"
+  );
 
   return (
     <div className="dashboard">
+      {/* Dashboard Header with Filter */}
+      <div className="dashboard-header1">
+        {/* <div className="dashboard-title">
+          <h2>📊 Release Dashboard</h2>
+          <p>Monitor and track your release progress across all accounts</p>
+        </div> */}
+
+        <div className="dashboard-filter-section">
+          <div className="filter-container">
+            <div className="filter-label">
+              {/* <span className="filter-icon">🏷️</span> */}
+              <span className="filter-text">Filter by Release Version</span>
+            </div>
+            <div className="filter-controls">
+              <div className="select-wrapper">
+                <select
+                  value={selectedReleaseVersion}
+                  onChange={handleReleaseVersionChange}
+                  className="dashboard-select"
+                >
+                  <option value="">All Release Versions</option>
+                  {regions.map((region) => (
+                    <option key={region.id} value={region.name}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="select-arrow">▼</span>
+              </div>
+              {selectedReleaseVersion && (
+                <button
+                  onClick={clearFilter}
+                  className="btn btn-clear-filter"
+                  title="Clear Filter"
+                >
+                  <span className="clear-icon">✕</span>
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* {selectedReleaseVersion && (
+            <div className="filter-status">
+              <div className="filter-info-card">
+                <div className="filter-info-content">
+                  <div className="filter-info-icon">📈</div>
+                  <div className="filter-info-details">
+                    <div className="filter-info-title">
+                      Filtered View: <strong>{selectedReleaseVersion}</strong>
+                    </div>
+                    <div className="filter-info-count">
+                      {filteredReleases.length} release
+                      {filteredReleases.length !== 1 ? "s" : ""} found
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )} */}
+        </div>
+      </div>
+
       <div className="stats-grid">
         <div className="stat-card">
           <h3>Total Accounts</h3>
           <div className="stat-number">{stats.totalAccounts || 0}</div>
-          {/* <div className="stat-label">Telecom Accounts</div> */}
         </div>
 
         <div className="stat-card scheduled">
           <h3>Scheduled</h3>
-          <div className="stat-number">{statusCounts.Scheduled || 0}</div>
-          {/* <div className="stat-label">Pending Releases</div> */}
+          <div className="stat-number">
+            {filteredStatusCounts.Scheduled || 0}
+          </div>
         </div>
 
         <div className="stat-card in-progress">
           <h3>In Progress</h3>
-          <div className="stat-number">{statusCounts["In Progress"] || 0}</div>
-          {/* <div className="stat-label">Active Releases</div> */}
+          <div className="stat-number">
+            {filteredStatusCounts["In Progress"] || 0}
+          </div>
         </div>
 
         <div className="stat-card done">
           <h3>Completed</h3>
-          <div className="stat-number">{statusCounts.Completed || 0}</div>
-          {/* <div className="stat-label">Successful Releases</div> */}
+          <div className="stat-number">
+            {filteredStatusCounts.Completed || 0}
+          </div>
         </div>
 
         <div className="stat-card canceled">
           <h3>Blocked</h3>
-          <div className="stat-number">{statusCounts.Blocked || 0}</div>
-          {/* <div className="stat-label">Canceled Releases</div> */}
+          <div className="stat-number">{filteredStatusCounts.Blocked || 0}</div>
         </div>
+
         <div className="stat-card defect">
           <h3>Defect Raised</h3>
-          <div className="stat-number">{statusCounts.Defect || 0}</div>
-          {/* <div className="stat-label">Canceled Releases</div> */}
+          <div className="stat-number">{filteredStatusCounts.Defect || 0}</div>
         </div>
       </div>
 
@@ -147,6 +242,9 @@ const Dashboard = ({ releases, accounts, regions }) => {
               <div key={release.id} className="upcoming-item">
                 <div className="release-info">
                   <h4>{release.account_name}</h4>
+                  {/* <span className="release-version-badge">
+                    🏷️ {release.release_version}
+                  </span> */}
                   <span className="release-date">
                     {new Date(release.release_date).toLocaleDateString()}
                   </span>
@@ -160,6 +258,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
           </div>
         </div>
       )}
+
       {inProgressReleases.length > 0 && (
         <div className="upcoming-releases">
           <h2>⚡ In Progress Accounts</h2>
@@ -167,7 +266,10 @@ const Dashboard = ({ releases, accounts, regions }) => {
             {inProgressReleases.slice(0, 5).map((release) => (
               <div key={release.id} className="upcoming-item">
                 <div className="release-info">
-                  <h4>{release.account_name}</h4>
+                  <h4>{release.account_name} </h4>
+                  {/* <span className="release-version-badge">
+                    🏷️ {release.release_version}
+                  </span> */}
                   <span className="release-date">
                     {new Date(release.release_date).toLocaleDateString()}
                   </span>
@@ -181,6 +283,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
           </div>
         </div>
       )}
+
       {upcomingReleases.length > 0 && (
         <div className="upcoming-releases">
           <h2>📅 Upcoming Accounts in Next 7 Days</h2>
@@ -189,6 +292,9 @@ const Dashboard = ({ releases, accounts, regions }) => {
               <div key={release.id} className="upcoming-item">
                 <div className="release-info">
                   <h4>{release.account_name}</h4>
+                  {/* <span className="release-version-badge">
+                    🏷️ {release.release_version}
+                  </span> */}
                   <span className="release-date">
                     {new Date(release.release_date).toLocaleDateString()}
                   </span>
@@ -202,6 +308,19 @@ const Dashboard = ({ releases, accounts, regions }) => {
           </div>
         </div>
       )}
+
+      {/* {filteredReleases.length === 0 && selectedReleaseVersion && (
+        <div className="empty-state">
+          <h3>📋 No releases found for {selectedReleaseVersion}</h3>
+          <p>
+            Try selecting a different release version or clear the filter to see
+            all releases.
+          </p>
+          <button onClick={clearFilter} className="btn btn-secondary">
+            🗑️ Clear Filter
+          </button>
+        </div>
+      )} */}
     </div>
   );
 };
