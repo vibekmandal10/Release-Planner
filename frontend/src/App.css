@@ -181,7 +181,7 @@ body {
 
 .upcoming-list {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 1rem;
 }
 
@@ -986,6 +986,10 @@ body {
 /* Status styles */
 .stat-card.canceled {
   border-left: 4px solid #dc3545;
+}
+
+.stat-card.defect {
+  border-left: 4px solid #dc35d4;
 }
 
 .status-canceled {

@@ -12,5 +12,17 @@
     "description": "Realese",
     "created_at": "2025-09-30T14:09:04.226Z",
     "updated_at": "2025-09-30T14:24:07.072Z"
+  },
+  {
+    "id": 3,
+    "name": "R26.01",
+    "description": "R26.01",
+    "created_at": "2025-10-01T11:43:49.882Z"
+  },
+  {
+    "id": 4,
+    "name": "R26.02",
+    "description": "R26.02",
+    "created_at": "2025-10-01T11:51:17.646Z"
   }
 ]

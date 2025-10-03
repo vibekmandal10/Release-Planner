@@ -23,7 +23,7 @@ const ReleaseTable = ({
         return "status-in-progress";
       case "Done":
         return "status-done";
-      case "Canceled":
+      case "Blocked":
         return "status-canceled";
       default:
         return "";
@@ -38,7 +38,7 @@ const ReleaseTable = ({
         return "⚡";
       case "Completed":
         return "✅";
-      case "Canceled":
+      case "Blocked":
         return "🚫";
       default:
         return "❓";
@@ -138,7 +138,7 @@ const ReleaseTable = ({
               <option value="Scheduled">📅 Scheduled</option>
               <option value="In Progress">⚡ In Progress</option>
               <option value="Completed">✅ Completed</option>
-              <option value="Canceled">🚫 Canceled</option>
+              <option value="Canceled">🚫 Blocked</option>
             </select>
           </div>
 

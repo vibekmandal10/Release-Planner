@@ -196,6 +196,20 @@ function AppContent() {
                   {tab.label}
                 </button>
               ))}
+              {/* <label>Release Version:</label>
+              <select
+                name="release_version"
+                value={formData.release_version}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Release Version</option>
+                {regions.map((region) => (
+                  <option key={region.id} value={region.name}>
+                    {region.name} - {region.description}
+                  </option>
+                ))}
+              </select> */}
             </nav>
           </div>
           <div className="header-right">

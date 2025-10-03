@@ -99,7 +99,7 @@ const ReleaseManager = ({ releases, accounts, regions, onDataUpdate }) => {
         color: "#42a5f5",
       },
       { label: "Completed", count: stats.Completed || 0, color: "#66bb6a" },
-      { label: "Canceled", count: stats.Canceled || 0, color: "#ef5350" },
+      { label: "Blocked", count: stats.Blocked || 0, color: "#ef5350" },
     ];
   };
 

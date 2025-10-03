@@ -2,23 +2,78 @@
   {
     "id": 1,
     "account_name": "ALTICE",
-    "release_date": "2025-10-01",
+    "release_date": "2025-10-16",
     "executor": "Vibek Mandal",
-    "status": "Scheduled",
+    "status": "In Progress",
     "notes": "",
     "release_version": "R25.05",
     "created_at": "2025-09-30T13:50:51.747Z",
-    "updated_at": "2025-09-30T13:50:51.747Z"
+    "updated_at": "2025-10-01T12:42:44.556Z"
   },
   {
     "id": 2,
     "account_name": "PLDT",
-    "release_date": "2025-10-10",
+    "release_date": "2025-10-08",
     "executor": "Rohit",
     "status": "Scheduled",
-    "notes": "Need to enable m2a\nHave basics check done\nMan\n'alds\n;sld\n\njkfgkdjfhjkghdfjg\nlkdfg",
+    "notes": "",
     "release_version": "R26.09",
     "created_at": "2025-09-30T14:24:31.706Z",
-    "updated_at": "2025-09-30T17:57:00.412Z"
+    "updated_at": "2025-10-01T13:10:56.152Z"
+  },
+  {
+    "id": 3,
+    "account_name": "CMM",
+    "release_date": "2025-10-31",
+    "executor": "Yachana",
+    "status": "In Progress",
+    "notes": "",
+    "release_version": "R26.01",
+    "created_at": "2025-10-01T11:44:22.399Z",
+    "updated_at": "2025-10-01T13:54:19.208Z"
+  },
+  {
+    "id": 4,
+    "account_name": "3IR",
+    "release_date": "2025-10-03",
+    "executor": "Kishan",
+    "status": "Scheduled",
+    "notes": "",
+    "release_version": "R26.01",
+    "created_at": "2025-10-01T11:47:20.525Z",
+    "updated_at": "2025-10-01T13:03:06.719Z"
+  },
+  {
+    "id": 5,
+    "account_name": "CHARTER",
+    "release_date": "2025-10-15",
+    "executor": "Rohit",
+    "status": "In Progress",
+    "notes": "",
+    "release_version": "R26.02",
+    "created_at": "2025-10-01T11:51:40.305Z",
+    "updated_at": "2025-10-01T12:41:13.341Z"
+  },
+  {
+    "id": 6,
+    "account_name": "3UK",
+    "release_date": "2025-10-09",
+    "executor": "Vibek",
+    "status": "Scheduled",
+    "notes": "",
+    "release_version": "R26.02",
+    "created_at": "2025-10-01T13:11:29.204Z",
+    "updated_at": "2025-10-01T13:11:29.204Z"
+  },
+  {
+    "id": 7,
+    "account_name": "CMM",
+    "release_date": "2025-10-01",
+    "executor": "Rohit",
+    "status": "Completed",
+    "notes": "",
+    "release_version": "R25.05",
+    "created_at": "2025-10-01T13:40:57.978Z",
+    "updated_at": "2025-10-01T13:40:57.978Z"
   }
 ]

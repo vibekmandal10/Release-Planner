@@ -107,7 +107,7 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
               <option value="Scheduled">📅 Scheduled</option>
               <option value="In Progress">⚡ In Progress</option>
               <option value="Completed">✅ Completed</option>
-              <option value="Canceled">🚫 Canceled</option>
+              <option value="Blocked">🚫 Blocked</option>
             </select>
           </div>
 
