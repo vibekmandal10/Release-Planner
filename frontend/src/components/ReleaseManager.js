@@ -18,6 +18,9 @@ const ReleaseManager = ({ releases, accounts, regions, onDataUpdate }) => {
         : "/api/releases";
       const method = editingRelease ? "PUT" : "POST";
 
+      // Debug: Log the data being sent to API
+      console.log('Sending to API:', formData);
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -31,10 +34,14 @@ const ReleaseManager = ({ releases, accounts, regions, onDataUpdate }) => {
         throw new Error(error.error || "Failed to save release");
       }
 
+      const result = await response.json();
+      console.log('API Response:', result);
+
       await onDataUpdate();
       setShowForm(false);
       setEditingRelease(null);
     } catch (error) {
+      console.error('Save error:', error);
       alert(`Error: ${error.message}`);
     }
   };

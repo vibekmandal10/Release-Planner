@@ -6,6 +6,11 @@ const RegionManager = ({ regions, onDataUpdate }) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    features: [],
+  });
+  const [currentFeature, setCurrentFeature] = useState({
+    name: "",
+    description: "",
   });
 
   const handleSubmit = async (e) => {
@@ -32,7 +37,11 @@ const RegionManager = ({ regions, onDataUpdate }) => {
       await onDataUpdate();
       setShowForm(false);
       setEditingRegion(null);
-      setFormData({ name: "", description: "" });
+      setFormData({ name: "", description: "", features: [] });
+      setCurrentFeature({
+        name: "",
+        description: "",
+      });
     } catch (error) {
       alert(`Error: ${error.message}`);
     }
@@ -43,6 +52,7 @@ const RegionManager = ({ regions, onDataUpdate }) => {
     setFormData({
       name: region.name,
       description: region.description,
+      features: region.features || [],
     });
     setShowForm(true);
   };
@@ -71,7 +81,35 @@ const RegionManager = ({ regions, onDataUpdate }) => {
   const handleCancel = () => {
     setShowForm(false);
     setEditingRegion(null);
-    setFormData({ name: "", description: "" });
+    setFormData({ name: "", description: "", features: [] });
+    setCurrentFeature({
+      name: "",
+      description: "",
+    });
+  };
+
+  const addFeature = () => {
+    if (currentFeature.name.trim() && currentFeature.description.trim()) {
+      const newFeature = {
+        id: Date.now(), // Simple ID generation
+        ...currentFeature,
+      };
+      setFormData({
+        ...formData,
+        features: [...formData.features, newFeature],
+      });
+      setCurrentFeature({
+        name: "",
+        description: "",
+      });
+    }
+  };
+
+  const removeFeature = (featureId) => {
+    setFormData({
+      ...formData,
+      features: formData.features.filter((feature) => feature.id !== featureId),
+    });
   };
 
   return (
@@ -115,6 +153,86 @@ const RegionManager = ({ regions, onDataUpdate }) => {
                 required
               />
             </div>
+
+            {/* Features Section */}
+            <div className="features-section">
+              <h5>🚀 Release Features</h5>
+
+              {/* Add New Feature */}
+              <div className="add-feature-form">
+                <div className="feature-inputs">
+                  <div className="form-group">
+                    <label>Feature Name:</label>
+                    <input
+                      type="text"
+                      value={currentFeature.name}
+                      onChange={(e) =>
+                        setCurrentFeature({
+                          ...currentFeature,
+                          name: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., User Authentication Enhancement"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Feature Description:</label>
+                    <textarea
+                      value={currentFeature.description}
+                      onChange={(e) =>
+                        setCurrentFeature({
+                          ...currentFeature,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Detailed description of the feature"
+                      rows="3"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={addFeature}
+                  disabled={
+                    !currentFeature.name.trim() ||
+                    !currentFeature.description.trim()
+                  }
+                >
+                  ➕ Add Feature
+                </button>
+              </div>
+
+              {/* Features List */}
+              {formData.features.length > 0 && (
+                <div className="features-list">
+                  <h6>
+                    📋 Features in this Release ({formData.features.length})
+                  </h6>
+                  <div className="features-grid">
+                    {formData.features.map((feature) => (
+                      <div key={feature.id} className="feature-card">
+                        <div className="feature-header">
+                          <h6 className="feature-name">🚀 {feature.name}</h6>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-delete"
+                            onClick={() => removeFeature(feature.id)}
+                            title="Remove Feature"
+                          >
+                            ❌
+                          </button>
+                        </div>
+                        <p className="feature-description">{feature.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="form-actions">
               <button type="submit" className="btn btn-primary">
                 {editingRegion ? "💾 Update" : "➕ Add"} Version
@@ -138,6 +256,28 @@ const RegionManager = ({ regions, onDataUpdate }) => {
             <div className="version-info">
               <h5>🏷️ {region.name}</h5>
               <p>{region.description}</p>
+
+              {/* Features Summary */}
+              {region.features && region.features.length > 0 && (
+                <div className="features-summary">
+                  <h6>🚀 Features ({region.features.length})</h6>
+                  <div className="features-preview">
+                    {region.features.slice(0, 3).map((feature) => (
+                      <div key={feature.id} className="feature-preview">
+                        <span className="feature-badge">
+                          🚀 {feature.name}
+                        </span>
+                      </div>
+                    ))}
+                    {region.features.length > 3 && (
+                      <span className="more-features">
+                        +{region.features.length - 3} more features
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <small>
                 Created: {new Date(region.created_at).toLocaleDateString()}
               </small>

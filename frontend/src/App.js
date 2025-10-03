@@ -5,6 +5,7 @@ import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import ReleaseTable from "./components/ReleaseTable";
 import AdminPanel from "./components/AdminPanel";
+import DefectsDashboard from "./components/DefectsDashboard";
 
 function AppContent() {
   const { user, logout, isAdmin, isReadOnly } = useAuth();
@@ -147,7 +148,10 @@ function AppContent() {
     const tabs = [{ id: "dashboard", label: "📊 Dashboard", icon: "📊" }];
 
     // All users can view releases
-    tabs.push({ id: "releases", label: "📋 View Releases", icon: "📋" });
+    tabs.push({ id: "releases", label: "📋 View Releases", icon: "📋 "});
+    
+    // Add defects dashboard for all users
+    tabs.push({ id: "defects", label: "🐛 Defects Analytics", icon: "🐛" });
 
     // Only admins can access admin panel
     if (isAdmin()) {
@@ -162,10 +166,10 @@ function AppContent() {
       case "dashboard":
         return (
           <Dashboard
-            releases={filteredReleases}
+            releases={releases}
             accounts={accounts}
             regions={regions}
-            selectedReleaseVersion={selectedReleaseVersion}
+            selectedReleaseVersion={selectedReleaseVersion} // Pass the filter
           />
         );
       case "releases":
@@ -178,6 +182,14 @@ function AppContent() {
             onDelete={() => {}} // Read-only for non-admin users
             onFilter={handleFilter}
             readOnly={isReadOnly()} // Pass read-only flag based on user role
+          />
+        );
+      case "defects":
+        return (
+          <DefectsDashboard
+            releases={releases}
+            accounts={accounts}
+            regions={regions}
           />
         );
       case "admin":
@@ -194,7 +206,7 @@ function AppContent() {
       default:
         return (
           <Dashboard
-            releases={filteredReleases}
+            releases={releases}
             accounts={accounts}
             regions={regions}
             selectedReleaseVersion={selectedReleaseVersion}

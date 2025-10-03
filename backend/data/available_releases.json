@@ -1,28 +1,27 @@
 [
   {
     "id": 1,
-    "name": "R25.05",
-    "description": "25.05",
-    "created_at": "2025-09-30T13:48:20.923Z",
-    "updated_at": "2025-09-30T13:48:42.031Z"
+    "name": "R24.05",
+    "description": "Monitoring Upgrade Certification (R24.05 --> R24.09",
+    "features": [],
+    "created_at": "2025-10-03T13:40:32.479Z"
   },
   {
     "id": 2,
-    "name": "R26.09",
-    "description": "Realese",
-    "created_at": "2025-09-30T14:09:04.226Z",
-    "updated_at": "2025-09-30T14:24:07.072Z"
-  },
-  {
-    "id": 3,
-    "name": "R26.01",
-    "description": "R26.01",
-    "created_at": "2025-10-01T11:43:49.882Z"
-  },
-  {
-    "id": 4,
-    "name": "R26.02",
-    "description": "R26.02",
-    "created_at": "2025-10-01T11:51:17.646Z"
+    "name": "R24.09",
+    "description": "R24.09",
+    "features": [
+      {
+        "id": 1759498977544,
+        "name": "Platform Upgrade Certification",
+        "description": "Background: AGS Management took a decision to 1) All accounts to be upgraded to Platform env to R24.05 as BAU and 2) allow the accounts to skip upgrading Platform to R24.07. As a result, we understand that most of the accounts will be with R4.05 when it is the time to upgrade to R24.09 (with some of the accounts on R24.07).\n\nObjective: Allow the accounts that opted out of upgrading to R24.07, to smoothly upgrade to R24.09.\n\nAssumptions:\n\nWe are considering only the accounts that will be on R24.05\nRequirements:\n\nCertify that Platform can be upgrade from R24.05 to R24.09\nCertify that BWC of Platform with Monitoring \nConsider Cloud Upgrades impacting Digital Teams"
+      },
+      {
+        "id": 1759498998528,
+        "name": "OneOps - OCB SPoG improvement",
+        "description": "Requirements:\n\nSPoG to sort the cycles based on the Cycle Date and Cycle Sequence ID (CR - ACMP-79990)\nOCB will enhance the response of the API and expose the CYCLE DATE (Date/Time when cycle was triggered in OCB)\nSPoG to show cycles as concatenation of Cycle Name, Cycle Code and Cycle Sequence (CR - ACMP-74501)\nRR - R24.09 _ ACMP-81569 - OneOps - OCB SPoG improvement _ RR-20240711_103237-Meeting Recording.mp4\n\nDemo - ACMP R24.09 Sprint _2 ready features demos-20240801_183605-Meeting Recording.mp4 (until min 05:00)\n\nRelease notes - https://confluence/display/RMA/R24.09+-+Monitoring+Release+notes#R24.09MonitoringReleasenotes-OneOps-"
+      }
+    ],
+    "created_at": "2025-10-03T13:43:38.073Z"
   }
 ]

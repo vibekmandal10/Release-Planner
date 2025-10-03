@@ -110,6 +110,38 @@ const writeAvailableReleases = async (availableReleases) => {
   }
 };
 
+// Add this function to migrate existing releases
+const migrateReleases = async () => {
+  try {
+    const releases = await readReleases();
+    let needsUpdate = false;
+
+    const updatedReleases = releases.map((release) => {
+      // Check if release needs migration (missing new fields)
+      if (!release.hasOwnProperty("completion_date")) {
+        needsUpdate = true;
+        return {
+          ...release,
+          completion_date: null,
+          time_taken_hours: null,
+          defects_raised: "0",
+          defect_details: release.defect_details || "",
+          completion_notes: "",
+          defects: [],
+        };
+      }
+      return release;
+    });
+
+    if (needsUpdate) {
+      await writeReleases(updatedReleases);
+      console.log("Releases migrated successfully");
+    }
+  } catch (error) {
+    console.error("Migration failed:", error);
+  }
+};
+
 // Routes
 
 // Get all available release versions
@@ -205,11 +237,9 @@ app.delete("/api/regions/:id", async (req, res) => {
         availableReleases.find((r) => r.id === parseInt(id))?.name
     );
     if (releaseInUse) {
-      return res
-        .status(400)
-        .json({
-          error: "Cannot delete release version that is being used in releases",
-        });
+      return res.status(400).json({
+        error: "Cannot delete release version that is being used in releases",
+      });
     }
 
     const filteredReleases = availableReleases.filter(
@@ -309,11 +339,9 @@ app.delete("/api/accounts/:id", async (req, res) => {
         accounts.find((a) => a.id === parseInt(id))?.name
     );
     if (accountInUse) {
-      return res
-        .status(400)
-        .json({
-          error: "Cannot delete account that is being used in releases",
-        });
+      return res.status(400).json({
+        error: "Cannot delete account that is being used in releases",
+      });
     }
 
     const filteredAccounts = accounts.filter((a) => a.id !== parseInt(id));
@@ -365,7 +393,7 @@ app.get("/api/releases", async (req, res) => {
   }
 });
 
-// Create new release
+// Update the POST endpoint for creating releases
 app.post("/api/releases", async (req, res) => {
   try {
     const {
@@ -375,9 +403,18 @@ app.post("/api/releases", async (req, res) => {
       status,
       notes,
       release_version,
+      // Add new completion tracking fields
+      completion_date,
+      time_taken_hours,
+      defects_raised,
+      defect_details,
+      completion_notes,
+      defects, // New defects array
     } = req.body;
+
     const releases = await readReleases();
     const newId = Math.max(...releases.map((r) => r.id), 0) + 1;
+
     const newRelease = {
       id: newId,
       account_name,
@@ -386,9 +423,17 @@ app.post("/api/releases", async (req, res) => {
       status: status || "Scheduled",
       notes: notes || "",
       release_version: release_version || "",
+      // Add new fields
+      completion_date: completion_date || null,
+      time_taken_hours: time_taken_hours || null,
+      defects_raised: defects_raised || "0",
+      defect_details: defect_details || "",
+      completion_notes: completion_notes || "",
+      defects: defects || [], // Store defects array
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
     releases.push(newRelease);
     await writeReleases(releases);
     res.json(newRelease);
@@ -397,7 +442,7 @@ app.post("/api/releases", async (req, res) => {
   }
 });
 
-// Update release
+// Update the PUT endpoint for updating releases
 app.put("/api/releases/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -408,7 +453,15 @@ app.put("/api/releases/:id", async (req, res) => {
       status,
       notes,
       release_version,
+      // Add new completion tracking fields
+      completion_date,
+      time_taken_hours,
+      defects_raised,
+      defect_details,
+      completion_notes,
+      defects, // New defects array
     } = req.body;
+
     const releases = await readReleases();
     const index = releases.findIndex((r) => r.id === parseInt(id));
 
@@ -424,11 +477,21 @@ app.put("/api/releases/:id", async (req, res) => {
       status,
       notes: notes || "",
       release_version: release_version || "",
+      // Update new fields
+      completion_date: completion_date || null,
+      time_taken_hours: time_taken_hours || null,
+      defects_raised: defects_raised || "0",
+      defect_details: defect_details || "",
+      completion_notes: completion_notes || "",
+      defects: defects || [], // Update defects array
       updated_at: new Date().toISOString(),
     };
 
     await writeReleases(releases);
-    res.json({ message: "Release updated successfully" });
+    res.json({
+      message: "Release updated successfully",
+      release: releases[index],
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -490,6 +553,8 @@ app.get("/api/stats", async (req, res) => {
 // Initialize data on startup
 initializeData()
   .then(() => {
+    // Call migration on server start
+    migrateReleases();
     app.listen(PORT, () => {
       console.log(`🚀 Release Planning Server running on port ${PORT}`);
       console.log(`📊 Dashboard: http://localhost:${PORT}`);

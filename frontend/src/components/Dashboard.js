@@ -44,6 +44,43 @@ const Dashboard = ({ releases, accounts, regions }) => {
     setSelectedReleaseVersion("");
   };
 
+  // Calculate enhanced statistics for filtered releases
+  const calculateEnhancedStats = () => {
+    const completedReleases = filteredReleases.filter(
+      (r) => r.status === "Completed"
+    );
+
+    // Calculate total defects
+    const totalDefects = completedReleases.reduce((total, release) => {
+      return total + (release.defects ? release.defects.length : 0);
+    }, 0);
+
+    // Calculate average time taken
+    const releasesWithTime = completedReleases.filter(
+      (r) => r.time_taken_hours && !isNaN(parseFloat(r.time_taken_hours))
+    );
+    const totalTime = releasesWithTime.reduce((total, release) => {
+      return total + parseFloat(release.time_taken_hours);
+    }, 0);
+    const avgTime =
+      releasesWithTime.length > 0
+        ? (totalTime / releasesWithTime.length).toFixed(1)
+        : 0;
+
+    // Calculate defect rate
+    const defectRate =
+      completedReleases.length > 0
+        ? (totalDefects / completedReleases.length).toFixed(1)
+        : 0;
+
+    return {
+      totalDefects,
+      avgTime,
+      defectRate,
+      completedCount: completedReleases.length,
+    };
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -113,6 +150,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
   };
 
   const filteredStatusCounts = getFilteredStatusCounts();
+  const enhancedStats = calculateEnhancedStats();
 
   const upcomingReleases = filteredReleases.filter((r) => {
     const d = new Date(r.release_date);
@@ -135,15 +173,9 @@ const Dashboard = ({ releases, accounts, regions }) => {
     <div className="dashboard">
       {/* Dashboard Header with Filter */}
       <div className="dashboard-header1">
-        {/* <div className="dashboard-title">
-          <h2>📊 Release Dashboard</h2>
-          <p>Monitor and track your release progress across all accounts</p>
-        </div> */}
-
         <div className="dashboard-filter-section">
           <div className="filter-container">
             <div className="filter-label">
-              {/* <span className="filter-icon">🏷️</span> */}
               <span className="filter-text">Filter by Release Version</span>
             </div>
             <div className="filter-controls">
@@ -175,31 +207,27 @@ const Dashboard = ({ releases, accounts, regions }) => {
             </div>
           </div>
 
-          {/* {selectedReleaseVersion && (
-            <div className="filter-status">
-              <div className="filter-info-card">
-                <div className="filter-info-content">
-                  <div className="filter-info-icon">📈</div>
-                  <div className="filter-info-details">
-                    <div className="filter-info-title">
-                      Filtered View: <strong>{selectedReleaseVersion}</strong>
-                    </div>
-                    <div className="filter-info-count">
-                      {filteredReleases.length} release
-                      {filteredReleases.length !== 1 ? "s" : ""} found
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {selectedReleaseVersion && (
+            <div className="filter-info-banner">
+              <h3>
+                Showing data for:
+                <span className="highlight">{selectedReleaseVersion}</span>
+              </h3>
+              <p>
+                {filteredReleases.length} release
+                {filteredReleases.length !== 1 ? "s" : ""} found
+              </p>
             </div>
-          )} */}
+          )}
         </div>
       </div>
 
+      {/* Enhanced Statistics Grid */}
       <div className="stats-grid">
         <div className="stat-card">
           <h3>Total Accounts</h3>
           <div className="stat-number">{stats.totalAccounts || 0}</div>
+          {/* <div className="stat-label">Registered Accounts</div> */}
         </div>
 
         <div className="stat-card scheduled">
@@ -207,6 +235,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
           <div className="stat-number">
             {filteredStatusCounts.Scheduled || 0}
           </div>
+          {/* <div className="stat-label">Pending Releases</div> */}
         </div>
 
         <div className="stat-card in-progress">
@@ -214,6 +243,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
           <div className="stat-number">
             {filteredStatusCounts["In Progress"] || 0}
           </div>
+          {/* <div className="stat-label">Active Releases</div> */}
         </div>
 
         <div className="stat-card done">
@@ -221,18 +251,68 @@ const Dashboard = ({ releases, accounts, regions }) => {
           <div className="stat-number">
             {filteredStatusCounts.Completed || 0}
           </div>
+          {/* <div className="stat-label">Successful Releases</div> */}
         </div>
 
         <div className="stat-card canceled">
           <h3>Blocked</h3>
           <div className="stat-number">{filteredStatusCounts.Blocked || 0}</div>
+          {/* <div className="stat-label">Blocked Releases</div> */}
         </div>
 
         <div className="stat-card defect">
-          <h3>Defect Raised</h3>
-          <div className="stat-number">{filteredStatusCounts.Defect || 0}</div>
+          <h3>Total Defects</h3>
+          <div className="stat-number">{enhancedStats.totalDefects} </div>
+          {/* <div className="stat-label">
+            {selectedReleaseVersion
+              ? `In ${selectedReleaseVersion}`
+              : "Across All Releases"}
+          </div> */}
+        </div>
+
+        <div className="stat-card performance">
+          <h3>Avg Time (Hour)</h3>
+          <div className="stat-number">{enhancedStats.avgTime}</div>
+          {/* <div className="stat-label">Hours per Release</div> */}
         </div>
       </div>
+
+      {/* Performance Insights Section
+      {(enhancedStats.completedCount > 0 || selectedReleaseVersion) && (
+        <div className="performance-insights">
+          <h3>📊 Performance Insights</h3>
+          <div className="insights-grid">
+            <div className="insight-card">
+              <div className="insight-icon">⏱️</div>
+              <div className="insight-content">
+                <h4>Average Release Time</h4>
+                <p>
+                  {enhancedStats.avgTime > 0 
+                    ? `${enhancedStats.avgTime} hours average completion time`
+                    : 'No time data available for completed releases'
+                  }
+                </p>
+                {selectedReleaseVersion && (
+                  <small>For {selectedReleaseVersion} releases</small>
+                )}
+              </div>
+            </div>
+            
+            <div className="insight-card">
+              <div className="insight-icon">🐛</div>
+              <div className="insight-content">
+                <h4>Quality Metrics</h4>
+                <p>
+                  {enhancedStats.totalDefects} total defects across {enhancedStats.completedCount} completed releases
+                </p>
+                {selectedReleaseVersion && (
+                  <small>Filtered for {selectedReleaseVersion}</small>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )} */}
 
       {blockedReleases.length > 0 && (
         <div className="upcoming-releases">
@@ -250,9 +330,9 @@ const Dashboard = ({ releases, accounts, regions }) => {
                   </span>
                 </div>
                 <div className="executor">👤 {release.executor}</div>
-                {release.notes && (
+                {/* {release.notes && (
                   <div className="notes">📝 {release.notes}</div>
-                )}
+                )} */}
               </div>
             ))}
           </div>
@@ -266,7 +346,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
             {inProgressReleases.slice(0, 5).map((release) => (
               <div key={release.id} className="upcoming-item">
                 <div className="release-info">
-                  <h4>{release.account_name} </h4>
+                  <h4>{release.account_name}</h4>
                   {/* <span className="release-version-badge">
                     🏷️ {release.release_version}
                   </span> */}
@@ -275,9 +355,9 @@ const Dashboard = ({ releases, accounts, regions }) => {
                   </span>
                 </div>
                 <div className="executor">👤 {release.executor}</div>
-                {release.notes && (
+                {/* {release.notes && (
                   <div className="notes">📝 {release.notes}</div>
-                )}
+                )} */}
               </div>
             ))}
           </div>
@@ -300,16 +380,16 @@ const Dashboard = ({ releases, accounts, regions }) => {
                   </span>
                 </div>
                 <div className="executor">👤 {release.executor}</div>
-                {release.notes && (
+                {/* {release.notes && (
                   <div className="notes">📝 {release.notes}</div>
-                )}
+                )} */}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* {filteredReleases.length === 0 && selectedReleaseVersion && (
+      {filteredReleases.length === 0 && selectedReleaseVersion && (
         <div className="empty-state">
           <h3>📋 No releases found for {selectedReleaseVersion}</h3>
           <p>
@@ -320,7 +400,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
             🗑️ Clear Filter
           </button>
         </div>
-      )} */}
+      )}
     </div>
   );
 };
