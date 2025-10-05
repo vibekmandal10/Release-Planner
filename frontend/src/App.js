@@ -152,7 +152,7 @@ function AppContent() {
     tabs.push({ id: "releases", label: "📋 View Releases", icon: "📋 " });
 
     // Add defects dashboard for all users
-    tabs.push({ id: "defects", label: " 🔷 Defects Analytics", icon: "🐛" });
+    tabs.push({ id: "defects", label: " 🔷 Defects Analytics", icon: "🔷" });
 
     // Only admins can access admin panel
     if (isAdmin()) {
@@ -275,14 +275,14 @@ function AppContent() {
 
           <div className="header-right">
             <div className="user-info">
-              <span className="user-role">
-                {isAdmin() ? "👑 Admin" : "👤 User"}: {user.name}
-              </span>
+              {/* <span className="user-role">
+                {isAdmin() ? "Admin" : "👤 User"}: {user.username}
+              </span> */}
               <button
                 onClick={logout}
                 className="btn btn-secondary btn-sm logout-btn"
               >
-                🚪 Logout
+                Logout
               </button>
             </div>
           </div>

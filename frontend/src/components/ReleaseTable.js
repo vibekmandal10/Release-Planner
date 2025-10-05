@@ -247,17 +247,48 @@ Release Management Team
         return;
       }
 
+      // Prepare release data for the HTML template
+      const releaseData = {
+        id: emailModal.release.id,
+        release_version: emailModal.release.release_version || "N/A",
+        account_name: emailModal.release.account_name,
+        region: getAccountRegion(emailModal.release.account_name) || "N/A",
+        release_date: emailModal.release.release_date,
+        executor: emailModal.release.executor,
+        status: emailModal.release.status,
+        notes: emailModal.release.notes || "",
+        completion_notes: emailModal.release.completion_notes || "",
+        completion_date: emailModal.release.completion_date || null,
+        time_taken_hours: emailModal.release.time_taken_hours || null,
+        defects_raised: emailModal.release.defects_raised || "0",
+        defect_details: emailModal.release.defect_details || "",
+        defects: emailModal.release.defects || [],
+        created_at: emailModal.release.created_at,
+        updated_at: emailModal.release.updated_at,
+      };
+
       const emailData = {
         to: toRecipients,
         subject: emailSubject,
-        body: emailBody,
-        releaseId: emailModal.release?.id,
+        releaseId: emailModal.release.id,
+        releaseData: releaseData, // Send release data instead of body
+        // body: emailBody, // Remove this - backend will generate from template
       };
 
       // Add CC if provided
       if (ccRecipients.length > 0) {
         emailData.cc = ccRecipients;
       }
+
+      console.log("📧 Sending email with release data:", {
+        recipients: {
+          to: toRecipients.length,
+          cc: ccRecipients.length,
+        },
+        releaseVersion: releaseData.release_version,
+        account: releaseData.account_name,
+        useTemplate: true,
+      });
 
       const response = await fetch("/api/send-email", {
         method: "POST",
@@ -270,7 +301,7 @@ Release Management Team
       const result = await response.json();
 
       if (result.success) {
-        let message = `✅ Email sent successfully!\n\n`;
+        let message = `✅ Email sent successfully using ${result.templateUsed}!\n\n`;
         message += `TO (${
           result.recipientCount.to
         }): ${result.recipients.to.join(", ")}\n`;
@@ -280,6 +311,7 @@ Release Management Team
           }): ${result.recipients.cc.join(", ")}\n`;
         }
         message += `\nTotal: ${result.recipientCount.total} recipients`;
+        message += `\nTemplate: ${result.templateUsed}`;
 
         alert(message);
         closeEmailModal();

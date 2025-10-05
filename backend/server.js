@@ -25,239 +25,1094 @@ const EMAIL_SETTINGS = {
   allowedDomains: ["amdocs.com", "gmail.com", "outlook.com", "yahoo.com"], // Add your allowed domains
 };
 
+// Function to get release version features
+const getReleaseVersionFeatures = async (releaseVersionName) => {
+  try {
+    const availableReleases = await readAvailableReleases();
+    const releaseVersion = availableReleases.find(
+      (release) => release.name === releaseVersionName
+    );
+    return releaseVersion?.features || [];
+  } catch (error) {
+    console.error("Error fetching release version features:", error);
+    return [];
+  }
+};
+
+// Build a plain text version of the release email
+const buildPlainTextReleaseEmail = (releaseData, features = []) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not specified";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Build features text section
+  const buildFeaturesText = () => {
+    if (!features || features.length === 0) {
+      return `
+RELEASE FEATURES
+================
+No specific features documented for this release version.
+`;
+    }
+
+    const featuresText = features
+      .map((feature, index) => {
+        let featureInfo = `${index + 1}. ${feature.name}`;
+        if (feature.type) featureInfo += ` [${feature.type}]`;
+        if (feature.priority) featureInfo += ` (${feature.priority} Priority)`;
+        featureInfo += `\n   ${feature.description}`;
+        return featureInfo;
+      })
+      .join("\n\n");
+
+    return `
+RELEASE FEATURES (${features.length})
+${"=".repeat(20 + features.length.toString().length)}
+${featuresText}
+`;
+  };
+
+  return `RELEASE NOTIFICATION
+===================
+
+Release Version: ${releaseData.release_version}
+Account: ${releaseData.account_name}
+Region: ${releaseData.region}
+Status: ${releaseData.status}
+
+RELEASE DETAILS
+===============
+Release Date: ${formatDate(releaseData.release_date)}
+Executor: ${releaseData.executor}${
+    releaseData.completion_date
+      ? `
+Completion Date: ${formatDate(releaseData.completion_date)} ${formatTime(
+          releaseData.completion_date
+        )}`
+      : ""
+  }${
+    releaseData.time_taken_hours
+      ? `
+Duration: ${releaseData.time_taken_hours} hours`
+      : ""
+  }
+Defects Raised: ${releaseData.defects_raised || "0"}
+
+${buildFeaturesText()}${
+    releaseData.notes
+      ? `
+RELEASE NOTES
+=============
+${releaseData.notes}
+`
+      : ""
+  }${
+    releaseData.completion_notes
+      ? `
+COMPLETION NOTES
+================
+${releaseData.completion_notes}
+`
+      : ""
+  }${
+    releaseData.defect_details
+      ? `
+DEFECT DETAILS
+==============
+${releaseData.defect_details}
+`
+      : ""
+  }
+
+---
+This email was generated automatically by the Release Management System
+Generated on ${new Date().toLocaleString()}`;
+};
+
 // Build Outlook-compatible HTML email template with better structure
-const buildReleaseEmailTemplate = (release) => {
+// const buildReleaseEmailTemplate = (releaseData, features = []) => {
+//   const formatDate = (dateString) => {
+//     if (!dateString) return "Not specified";
+//     return new Date(dateString).toLocaleDateString("en-US", {
+//       weekday: "long",
+//       year: "numeric",
+//       month: "long",
+//       day: "numeric",
+//     });
+//   };
+
+//   const formatTime = (dateString) => {
+//     if (!dateString) return "";
+//     return new Date(dateString).toLocaleTimeString("en-US", {
+//       hour: "2-digit",
+//       minute: "2-digit",
+//     });
+//   };
+
+//   const getStatusColor = (status) => {
+//     switch (status?.toLowerCase()) {
+//       case "completed":
+//         return "#28a745";
+//       case "in-progress":
+//         return "#ffc107";
+//       case "blocked":
+//         return "#dc3545";
+//       case "scheduled":
+//         return "#007bff";
+//       default:
+//         return "#6c757d";
+//     }
+//   };
+
+//   const getStatusIcon = (status) => {
+//     switch (status?.toLowerCase()) {
+//       case "completed":
+//         return "✅";
+//       case "in-progress":
+//         return "🔄";
+//       case "blocked":
+//         return "🚫";
+//       case "scheduled":
+//         return "📅";
+//       default:
+//         return "📋";
+//     }
+//   };
+
+//   const getFeatureTypeIcon = (type) => {
+//     switch (type) {
+//       case "New Feature":
+//         return "🆕";
+//       case "Enhancement":
+//         return "⚡";
+//       case "Bug Fix":
+//         return "🐛";
+//       case "Security":
+//         return "🔒";
+//       case "Performance":
+//         return "🚀";
+//       default:
+//         return "📋";
+//     }
+//   };
+
+//   const getPriorityColor = (priority) => {
+//     switch (priority?.toLowerCase()) {
+//       case "critical":
+//         return "#dc3545";
+//       case "high":
+//         return "#fd7e14";
+//       case "medium":
+//         return "#ffc107";
+//       case "low":
+//         return "#28a745";
+//       default:
+//         return "#6c757d";
+//     }
+//   };
+
+//   // Build features HTML section
+//   const buildFeaturesSection = () => {
+//     if (!features || features.length === 0) {
+//       return `
+//         <tr>
+//           <td style="padding: 20px 0; border-top: 2px solid #e9ecef;">
+//             <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px;">🚀 Release Features</h3>
+//             <p style="color: #6c757d; margin: 0; font-style: italic;">No specific features documented for this release version.</p>
+//           </td>
+//         </tr>
+//       `;
+//     }
+
+//     const featuresHtml = features
+//       .map(
+//         (feature) => `
+//       <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin-bottom: 12px;">
+//         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+//           <div style="display: flex; gap: 10px; align-items: center;">
+//             <span style="background: #e9ecef; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #495057;">
+//               ${getFeatureTypeIcon(feature.type)} ${feature.type || "Feature"}
+//             </span>
+//             ${
+//               feature.priority
+//                 ? `
+//               <span style="background: ${getPriorityColor(
+//                 feature.priority
+//               )}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+//                 ${feature.priority}
+//               </span>
+//             `
+//                 : ""
+//             }
+//           </div>
+//         </div>
+//         <h4 style="margin: 0 0 8px 0; color: #212529; font-size: 16px;">${
+//           feature.name
+//         }</h4>
+//         <p style="margin: 0; color: #6c757d; font-size: 14px; line-height: 1.5;">${
+//           feature.description
+//         }</p>
+//       </div>
+//     `
+//       )
+//       .join("");
+
+//     return `
+//       <tr>
+//         <td style="padding: 20px 0; border-top: 2px solid #e9ecef;">
+//           <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px;">🚀 Release Features (${features.length})</h3>
+//           ${featuresHtml}
+//         </td>
+//       </tr>
+//     `;
+//   };
+
+//   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+// <html xmlns="http://www.w3.org/1999/xhtml">
+// <head>
+//     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+//     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+//     <title>Release Notification - ${releaseData.release_version}</title>
+//     <!--[if mso]>
+//     <style type="text/css">
+//         table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+//         td { mso-line-height-rule: exactly; }
+//     </style>
+//     <![endif]-->
+// </head>
+// <body style="margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #333333; background-color: #f5f5f5;">
+//     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 700px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+//         <!-- Header -->
+//         <tr>
+//             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 40px; text-align: center;">
+//                 <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+//                     📋 Release Notification
+//                 </h1>
+//                 <p style="color: #f8f9fa; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">
+//                     ${releaseData.release_version} • ${releaseData.account_name}
+//                 </p>
+//             </td>
+//         </tr>
+
+//         <!-- Content -->
+//         <tr>
+//             <td style="padding: 40px;">
+//                 <!-- Status Badge -->
+//                 <div style="text-align: center; margin-bottom: 30px;">
+//                     <span style="background-color: ${getStatusColor(
+//                       releaseData.status
+//                     )}; color: #ffffff; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+//                         ${getStatusIcon(releaseData.status)} ${
+//     releaseData.status
+//   }
+//                     </span>
+//                 </div>
+
+//                 <!-- Release Information -->
+//                 <table cellpadding="0" cellspacing="0" border="0" width="100%">
+//                     <tr>
+//                         <td style="padding-bottom: 25px;">
+//                             <h2 style="color: #495057; margin: 0 0 20px 0; font-size: 22px; border-bottom: 2px solid #e9ecef; padding-bottom: 10px;">
+//                                 📊 Release Details
+//                             </h2>
+
+//                             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f8f9fa; border-radius: 8px; padding: 20px;">
+//                                 <tr>
+//                                     <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">🏷️ Version:</strong>
+//                                         <span style="color: #212529; font-weight: 600;">${
+//                                           releaseData.release_version
+//                                         }</span>
+//                                     </td>
+//                                 </tr>
+//                                 <tr>
+//                                     <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">🏢 Account:</strong>
+//                                         <span style="color: #212529;">${
+//                                           releaseData.account_name
+//                                         }</span>
+//                                     </td>
+//                                 </tr>
+//                                 <tr>
+//                                     <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">🌍 Region:</strong>
+//                                         <span style="color: #212529;">${
+//                                           releaseData.region
+//                                         }</span>
+//                                     </td>
+//                                 </tr>
+//                                 <tr>
+//                                     <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">📅 Release Date:</strong>
+//                                         <span style="color: #212529;">${formatDate(
+//                                           releaseData.release_date
+//                                         )}</span>
+//                                     </td>
+//                                 </tr>
+//                                 <tr>
+//                                     <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">👤 Executor:</strong>
+//                                         <span style="color: #212529;">${
+//                                           releaseData.executor
+//                                         }</span>
+//                                     </td>
+//                                 </tr>
+//                                 ${
+//                                   releaseData.completion_date
+//                                     ? `
+//                                 <tr>
+//                                     <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">✅ Completed:</strong>
+//                                         <span style="color: #212529;">${formatDate(
+//                                           releaseData.completion_date
+//                                         )} ${formatTime(
+//                                         releaseData.completion_date
+//                                       )}</span>
+//                                     </td>
+//                                 </tr>
+//                                 `
+//                                     : ""
+//                                 }
+//                                 ${
+//                                   releaseData.time_taken_hours
+//                                     ? `
+//                                 <tr>
+//                                     <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">⏱️ Duration:</strong>
+//                                         <span style="color: #212529;">${releaseData.time_taken_hours} hours</span>
+//                                     </td>
+//                                 </tr>
+//                                 `
+//                                     : ""
+//                                 }
+//                                 <tr>
+//                                     <td style="padding: 8px 0;">
+//                                         <strong style="color: #495057; display: inline-block; width: 140px;">🐛 Defects:</strong>
+//                                         <span style="color: #212529;">${
+//                                           releaseData.defects_raised || "0"
+//                                         }</span>
+//                                     </td>
+//                                 </tr>
+//                             </table>
+//                         </td>
+//                     </tr>
+
+//                     ${buildFeaturesSection()}
+
+//                     ${
+//                       releaseData.notes
+//                         ? `
+//                     <tr>
+//                         <td style="padding: 20px 0; border-top: 2px solid #e9ecef;">
+//                             <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px;">📝 Release Notes</h3>
+//                             <div style="background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px 20px; border-radius: 0 6px 6px 0;">
+//                                 <p style="margin: 0; color: #495057; white-space: pre-wrap;">${releaseData.notes}</p>
+//                             </div>
+//                         </td>
+//                     </tr>
+//                     `
+//                         : ""
+//                     }
+
+//                     ${
+//                       releaseData.completion_notes
+//                         ? `
+//                     <tr>
+//                         <td style="padding: 20px 0; border-top: 2px solid #e9ecef;">
+//                             <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px;">✅ Completion Notes</h3>
+//                             <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 15px 20px; border-radius: 0 6px 6px 0;">
+//                                 <p style="margin: 0; color: #495057; white-space: pre-wrap;">${releaseData.completion_notes}</p>
+//                             </div>
+//                         </td>
+//                     </tr>
+//                     `
+//                         : ""
+//                     }
+
+//                     ${
+//                       releaseData.defect_details
+//                         ? `
+//                     <tr>
+//                         <td style="padding: 20px 0; border-top: 2px solid #e9ecef;">
+//                             <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px;">🐛 Defect Details</h3>
+//                             <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px 20px; border-radius: 0 6px 6px 0;">
+//                                 <p style="margin: 0; color: #856404; white-space: pre-wrap;">${releaseData.defect_details}</p>
+//                             </div>
+//                         </td>
+//                     </tr>
+//                     `
+//                         : ""
+//                     }
+//                 </table>
+//             </td>
+//         </tr>
+
+//         <!-- Footer -->
+//         <tr>
+//             <td style="background-color: #f8f9fa; padding: 25px 40px; text-align: center; border-top: 1px solid #dee2e6;">
+//                 <p style="margin: 0; color: #6c757d; font-size: 12px;">
+//                     📧 This email was generated automatically by the Release Management System<br>
+//                     🕒 Generated on ${new Date().toLocaleString()}
+//                 </p>
+//             </td>
+//         </tr>
+//     </table>
+// </body>
+// </html>`;
+// };
+
+// Build Outlook-compatible HTML email template with professional styling
+const buildReleaseEmailTemplate = (releaseData, features = []) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not specified";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return "#28a745";
+      case "in-progress":
+        return "#17a2b8";
+      case "blocked":
+        return "#dc3545";
+      case "scheduled":
+        return "#007bff";
+      default:
+        return "#6c757d";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return "✅";
+      case "in-progress":
+        return "🔄";
+      case "blocked":
+        return "🚫";
+      case "scheduled":
+        return "📅";
+      default:
+        return "📋";
+    }
+  };
+
+  const getFeatureTypeIcon = (type) => {
+    switch (type) {
+      case "New Feature":
+        return "🆕";
+      case "Enhancement":
+        return "⚡";
+      case "Bug Fix":
+        return "🔷";
+      case "Security":
+        return "🔒";
+      case "Performance":
+        return "🚀";
+      default:
+        return "📋";
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case "critical":
+        return "#dc3545";
+      case "high":
+        return "#fd7e14";
+      case "medium":
+        return "#ffc107";
+      case "low":
+        return "#28a745";
+      default:
+        return "#6c757d";
+    }
+  };
+
+  const getPriorityTextColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case "critical":
+        return "#ffffff";
+      case "high":
+        return "#ffffff";
+      case "medium":
+        return "#212529";
+      case "low":
+        return "#ffffff";
+      default:
+        return "#ffffff";
+    }
+  };
+
+  // Build features HTML section with professional styling
+  const buildFeaturesSection = () => {
+    if (!features || features.length === 0) {
+      return `
+        <tr>
+          <td style="padding: 30px 0; border-top: 3px solid #e9ecef;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; border-radius: 12px; border: 1px solid #dee2e6;">
+                  <h3 style="color: #495057; margin: 0 0 10px 0; font-size: 20px; font-weight: 600;">
+                    🚀 Release Features
+                  </h3>
+                  <p style="color: #6c757d; margin: 0; font-style: italic; font-size: 15px;">
+                    No specific features documented for this release version.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+    }
+
+    const featuresHtml = features
+      .map(
+        (feature) => `
+        <tr>
+          <td style="padding: 0 0 15px 0;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #ffffff; border: 1px solid #e3e6ea; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;">
+              <tr>
+                <td style="padding: 20px;">
+                  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                    
+                    <tr>
+                      <td style="padding-bottom: 8px;">
+                        <h4 style="margin: 0; color: #202124; font-size: 16px; font-weight: 600; line-height: 1.3;">
+                          ${feature.name}
+                        </h4>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <p style="margin: 0; color: #5f6368; font-size: 14px; line-height: 1.5;">
+                          ${feature.description}
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        `
+      )
+      .join("");
+
+    return `
+      <tr>
+        <td style="padding: 30px 0; border-top: 3px solid #e9ecef;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td style="padding-bottom: 20px;">
+                <h3 style="color: #202124; margin: 0; font-size: 22px; font-weight: 600;">
+                  🚀 Release Features
+                  <span style="background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); color: #ffffff; padding: 4px 12px; border-radius: 15px; font-size: 14px; font-weight: 600; margin-left: 10px;">
+                    ${features.length}
+                  </span>
+                </h3>
+              </td>
+            </tr>
+            ${featuresHtml}
+          </table>
+        </td>
+      </tr>
+    `;
+  };
+
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Release Notification</title>
+    <title>Release Notification - ${releaseData.release_version}</title>
     <!--[if mso]>
     <style type="text/css">
         table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         td { mso-line-height-rule: exactly; }
+        .gradient-bg { background: #4285f4 !important; }
     </style>
     <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
-    
-    <!-- Wrapper Table -->
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5; min-height: 100vh;">
+<body style="margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; line-height: 1.6; color: #202124; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
+
+    <!-- Main Container -->
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 750px; margin: 0 auto;">
         <tr>
-            <td align="center" valign="top" style="padding: 20px;">
-                
-                <!-- Main Email Container -->
-                <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border: 2px solid #0078d7; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                    
-                    <!-- Header Section -->
+            <td>
+                <!-- Email Card -->
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); overflow: hidden; border: 1px solid #e8eaed;">
+
+                    <!-- Header -->
                     <tr>
-                        <td style="background-color: #0078d7; padding: 25px; text-align: center; border-radius: 6px 6px 0 0;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold; font-family: Arial, Helvetica, sans-serif;">
-                                🚀 RELEASE NOTIFICATION
-                            </h1>
-                            <h2 style="margin: 10px 0 0 0; color: #ffffff; font-size: 18px; font-weight: normal; font-family: Arial, Helvetica, sans-serif;">
-                                ${release.release_version}
-                            </h2>
-                        </td>
-                    </tr>
-                    
-                    <!-- Content Section -->
-                    <tr>
-                        <td style="padding: 30px; background-color: #ffffff;">
+                        <td style="background: #4285f4;">
                             
-                            <!-- Greeting -->
-                            <p style="margin: 0 0 20px 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; line-height: 1.6;">
-                                Dear <strong>Operations Team</strong>,
-                            </p>
-                            
-                            <p style="margin: 0 0 25px 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; line-height: 1.6;">
-                                Please find the release details below:
-                            </p>
-                            
-                            <!-- Release Details Table -->
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 2px solid #0078d7; border-collapse: collapse; margin-bottom: 25px;">
-                                
-                                <!-- Table Header -->
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
                                 <tr>
-                                    <td colspan="2" style="background-color: #0078d7; color: #ffffff; font-weight: bold; text-align: center; font-size: 16px; padding: 15px; font-family: Arial, Helvetica, sans-serif; border: none;">
-                                        📋 RELEASE DETAILS
-                                    </td>
-                                </tr>
-                                
-                                <!-- Release Version Row -->
-                                <tr>
-                                    <td style="background-color: #f8f9fa; border: 1px solid #dee2e6; font-weight: bold; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; width: 40%;">
-                                        🏷️ Release Version
-                                    </td>
-                                    <td style="border: 1px solid #dee2e6; color: #0078d7; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold;">
-                                        ${release.release_version}
-                                    </td>
-                                </tr>
-                                
-                                <!-- Account Name Row -->
-                                <tr>
-                                    <td style="background-color: #f8f9fa; border: 1px solid #dee2e6; font-weight: bold; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        🏢 Account Name
-                                    </td>
-                                    <td style="border: 1px solid #dee2e6; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        ${release.account_name}
-                                    </td>
-                                </tr>
-                                
-                                <!-- Region Row -->
-                                <tr>
-                                    <td style="background-color: #f8f9fa; border: 1px solid #dee2e6; font-weight: bold; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        🌍 Region
-                                    </td>
-                                    <td style="border: 1px solid #dee2e6; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        ${release.region || "Not Specified"}
-                                    </td>
-                                </tr>
-                                
-                                <!-- Release Date Row -->
-                                <tr>
-                                    <td style="background-color: #f8f9fa; border: 1px solid #dee2e6; font-weight: bold; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        📅 Release Date
-                                    </td>
-                                    <td style="border: 1px solid #dee2e6; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold;">
-                                        ${new Date(
-                                          release.release_date
-                                        ).toLocaleDateString("en-US", {
-                                          weekday: "long",
-                                          year: "numeric",
-                                          month: "long",
-                                          day: "numeric",
-                                        })}
-                                    </td>
-                                </tr>
-                                
-                                <!-- Executor Row -->
-                                <tr>
-                                    <td style="background-color: #f8f9fa; border: 1px solid #dee2e6; font-weight: bold; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        👤 Executor
-                                    </td>
-                                    <td style="border: 1px solid #dee2e6; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        ${release.executor}
-                                    </td>
-                                </tr>
-                                
-                                <!-- Status Row -->
-                                <tr>
-                                    <td style="background-color: #f8f9fa; border: 1px solid #dee2e6; font-weight: bold; color: #333333; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
-                                        📊 Status
-                                    </td>
-                                    <td style="border: 1px solid #dee2e6; padding: 12px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold; color: ${
-                                      release.status === "Blocked"
-                                        ? "#dc3545"
-                                        : release.status === "Completed"
-                                        ? "#28a745"
-                                        : release.status === "In Progress"
-                                        ? "#ffc107"
-                                        : "#0078d7"
-                                    };">
-                                        ${release.status.toUpperCase()}
-                                    </td>
-                                </tr>
-                                
-                            </table>
-                            
-                            ${
-                              release.notes
-                                ? `
-                            <!-- Notes Section -->
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 25px;">
-                                <tr>
-                                    <td style="background-color: #e9ecef; padding: 15px; border-left: 4px solid #0078d7; border-radius: 4px;">
-                                        <h3 style="margin: 0 0 10px 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: bold; color: #0078d7;">
-                                            📝 NOTES
-                                        </h3>
-                                        <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333; line-height: 1.6; white-space: pre-wrap;">
-                                            ${release.notes}
+                                    <td style="text-align: center;">
+                                        <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); letter-spacing: -0.5px;">
+                                            📋 Release Notification
+                                        </h1>
+                                        
+                                        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 18px; font-weight: 500;">
+                                            ${releaseData.release_version} • ${
+    releaseData.account_name
+  }
                                         </p>
                                     </td>
                                 </tr>
                             </table>
-                            `
-                                : ""
-                            }
-                            
-                            <!-- Action Items -->
-                            <p style="margin: 0 0 20px 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; line-height: 1.6;">
-                                ✅ Please ensure all necessary preparations are completed before the scheduled release date.
-                            </p>
-                            
-                            <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; line-height: 1.6;">
-                                For any questions or concerns, please contact the <strong>Release Management Team</strong>.
-                            </p>
-                            
                         </td>
                     </tr>
                     
-                    <!-- Footer Section -->
+
+                    <!-- Content -->
                     <tr>
-                        <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #dee2e6; border-radius: 0 0 6px 6px;">
-                            <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #666666;">
-                                📧 Release Management System | Confidential
-                            </p>
-                            <p style="margin: 5px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #666666;">
-                                Generated on ${new Date().toLocaleString()}
-                            </p>
+                        <td style="padding: 40px;">
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+
+                                <!-- Status Badge -->
+                                <tr>
+                                    <td style="text-align: center; padding-bottom: 35px;">
+                                        <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                                            <tr>
+                                                <td style="background: ${getStatusColor(
+                                                  releaseData.status
+                                                )}; color: #ffffff; padding: 15px 30px; border-radius: 30px; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                                    ${getStatusIcon(
+                                                      releaseData.status
+                                                    )} ${releaseData.status}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <!-- Release Information -->
+                                <tr>
+                                    <td style="padding-bottom: 30px;">
+                                        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="padding-bottom: 25px;">
+                                                    <h2 style="color: #202124; margin: 0; font-size: 24px; font-weight: 600; border-bottom: 3px solid #4285f4; padding-bottom: 12px; display: inline-block;">
+                                                        📊 Release Details
+                                                    </h2>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 12px; padding: 25px; border: 1px solid #e8eaed; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                                                        <tr>
+                                                            <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">🏷️ Version:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-weight: 600; font-size: 15px;">${
+                                                                              releaseData.release_version
+                                                                            }</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">🏢 Account:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-size: 15px;">${
+                                                                              releaseData.account_name
+                                                                            }</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">🌍 Region:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-size: 15px;">${
+                                                                              releaseData.region
+                                                                            }</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">📅 Release Date:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-size: 15px;">${formatDate(
+                                                                              releaseData.release_date
+                                                                            )}</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">👤 Executor:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-size: 15px;">${
+                                                                              releaseData.executor
+                                                                            }</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        ${
+                                                          releaseData.completion_date
+                                                            ? `
+                                                        <tr>
+                                                            <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">✅ Completed:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-size: 15px;">${formatDate(
+                                                                              releaseData.completion_date
+                                                                            )} </span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        `
+                                                            : ""
+                                                        }
+                                                        ${
+                                                          releaseData.time_taken_hours
+                                                            ? `
+                                                        <tr>
+                                                            <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">⏱️ Duration:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-size: 15px;">${releaseData.time_taken_hours} hours</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        `
+                                                            : ""
+                                                        }
+                                                        <tr>
+                                                            <td style="padding: 12px 0;">
+                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td style="width: 160px; vertical-align: top;">
+                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">🔷 Defects:</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span style="color: #202124; font-size: 15px; font-weight: 600;">${
+                                                                              releaseData.defects_raised ||
+                                                                              "0"
+                                                                            }</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                ${buildFeaturesSection()}
+
+                                ${
+                                  releaseData.notes
+                                    ? `
+                                <tr>
+                                    <td style="padding: 30px 0; border-top: 3px solid #e9ecef;">
+                                        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="padding-bottom: 15px;">
+                                                    <h3 style="color: #202124; margin: 0; font-size: 20px; font-weight: 600;">📝 Release Notes</h3>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-left: 4px solid #2196f3; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                                        <tr>
+                                                            <td>
+                                                                <p style="margin: 0; color: #1565c0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${releaseData.notes}</p>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                `
+                                    : ""
+                                }
+
+                                ${
+                                  releaseData.completion_notes
+                                    ? `
+                                <tr>
+                                    <td style="padding: 30px 0; border-top: 3px solid #e9ecef;">
+                                        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="padding-bottom: 15px;">
+                                                    <h3 style="color: #202124; margin: 0; font-size: 20px; font-weight: 600;">✅ Completion Notes</h3>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%); border-left: 4px solid #4caf50; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                                        <tr>
+                                                            <td>
+                                                                <p style="margin: 0; color: #2e7d32; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${releaseData.completion_notes}</p>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                `
+                                    : ""
+                                }
+
+                                ${
+                                  releaseData.defect_details
+                                    ? `
+                                <tr>
+                                    <td style="padding: 30px 0; border-top: 3px solid #e9ecef;">
+                                        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="padding-bottom: 15px;">
+                                                    <h3 style="color: #202124; margin: 0; font-size: 20px; font-weight: 600;">🔷 Defect Details</h3>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border-left: 4px solid #1a73e8; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                                        <tr>
+                                                            
+                                                            <td>
+                                                              ${releaseData.defects
+                                                                .map(
+                                                                  (defect) => `
+                                                                      <p style="margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">
+                                                                        <a href="https://deljira/browse/${defect.defect_id}" 
+                                                                           style="color: #1a73e8; text-decoration: none; font-weight: 600;"
+                                                                           target="_blank">
+                                                                           ${defect.defect_id}
+                                                                        </a>: ${defect.description}
+                                                                      </p>
+                                                                    `
+                                                                )
+                                                                .join("")}
+                                                            </td>
+
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                `
+                                    : ""
+                                }
+                            </table>
                         </td>
                     </tr>
-                    
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 30px; text-align: center; border-top: 1px solid #dee2e6;">
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <p style="margin: 0 0 8px 0; color: #6c757d; font-size: 13px; font-weight: 500;">
+                                            📧 This email was generated automatically by the Release Management System
+                                        </p>
+                                        <p style="margin: 0; color: #adb5bd; font-size: 12px;">
+                                            🕒 Generated on ${new Date().toLocaleString(
+                                              "en-US",
+                                              {
+                                                weekday: "long",
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                              }
+                                            )}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
                 </table>
-                
             </td>
         </tr>
     </table>
-    
 </body>
 </html>`;
 };
+// const buildReleaseEmailTemplate = (release) => {
+//   const statusColor =
+//     release.status === "Blocked"
+//       ? "#D92D20"
+//       : release.status === "Scheduled"
+//       ? "#F79009"
+//       : "#12B76A";
 
-// Build a plain text version of the release email
-const buildPlainTextReleaseEmail = (release) => {
-  return `RELEASE NOTIFICATION - ${release.release_version}
+//   return `
+//   <div style="margin:0;padding:0;background:#f6f8fa;font-family:'Segoe UI',Arial,sans-serif;color:#333;">
+//     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width:700px;margin:auto;background:#ffffff;border-radius:10px;box-shadow:0 3px 12px rgba(0,0,0,0.08);overflow:hidden;">
+//       <tr>
+//         <td style="background:linear-gradient(90deg,#0078D7,#005A9E);color:white;padding:20px 30px;text-align:left;">
+//           <h2 style="margin:0;font-size:22px;">🚀 Release Notification</h2>
+//           <p style="margin:5px 0 0;font-size:15px;">Version: <strong>${
+//             release.release_version
+//           }</strong></p>
+//         </td>
+//       </tr>
+//       <tr>
+//         <td style="padding:25px 30px;">
+//           <p style="margin:0 0 15px;">Dear <strong>Operations Team</strong>,</p>
+//           <p style="margin:0 0 25px;">Please find below the details for the upcoming release.</p>
 
-Dear Operations Team,
+//           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-size:14px;">
+//             <tbody>
+//               <tr style="background:#f9fafb;">
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;width:40%;"><strong>🏷️ Release Version</strong></td>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;">${
+//                   release.release_version
+//                 }</td>
+//               </tr>
+//               <tr>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;"><strong>🏢 Account Name</strong></td>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;">${
+//                   release.account_name
+//                 }</td>
+//               </tr>
+//               <tr style="background:#f9fafb;">
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;"><strong>🌍 Region</strong></td>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;">${
+//                   release.region || "-"
+//                 }</td>
+//               </tr>
+//               <tr>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;"><strong>📅 Release Date</strong></td>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;">${
+//                   release.release_date
+//                 }</td>
+//               </tr>
+//               <tr style="background:#f9fafb;">
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;"><strong>👤 Executor</strong></td>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;">${
+//                   release.executor
+//                 }</td>
+//               </tr>
+//               <tr>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;"><strong>📊 Status</strong></td>
+//                 <td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:bold;color:${statusColor};">${
+//     release.status
+//   }</td>
+//               </tr>
+//             </tbody>
+//           </table>
 
-Please find the release details below:
+//           ${
+//             release.notes
+//               ? `
+//             <div style="margin-top:25px;">
+//               <h3 style="font-size:16px;color:#0078D7;margin-bottom:8px;">📝 Notes</h3>
+//               <div style="padding:12px 15px;background:#f3f4f6;border-radius:6px;border:1px solid #e5e7eb;white-space:pre-wrap;line-height:1.5;">
+//                 ${release.notes.replace(/\n/g, "<br>")}
+//               </div>
+//             </div>`
+//               : ""
+//           }
 
-==============================================
-RELEASE DETAILS
-==============================================
+//           <div style="margin-top:30px;background:#eef6ff;border-left:4px solid #0078D7;padding:12px 15px;border-radius:6px;">
+//             ✅ Please ensure all necessary pre-checks are completed before the scheduled release date.
+//           </div>
 
-🏷️ Release Version: ${release.release_version}
-🏢 Account Name: ${release.account_name}
-🌍 Region: ${release.region || "Not Specified"}
-📅 Release Date: ${new Date(release.release_date).toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })}
-👤 Executor: ${release.executor}
-📊 Status: ${release.status.toUpperCase()}
+//           <p style="margin-top:25px;">For questions or assistance, contact the <strong>Release Management Team</strong>.</p>
 
-${
-  release.notes
-    ? `📝 NOTES:
-${release.notes}
+//           <hr style="margin:35px 0 20px;border:none;border-top:1px solid #ddd;">
+//           <p style="font-size:12px;color:#666;text-align:center;">
+//             📧 Release Management System | Confidential Information
+//           </p>
+//         </td>
+//       </tr>
+//     </table>
+//   </div>
+//   `;
+// };
 
-`
-    : ""
-}✅ Please ensure all necessary preparations are completed before the scheduled release date.
-
-For any questions or concerns, please contact the Release Management Team.
-
-==============================================
-📧 Release Management System | Confidential
-Generated on ${new Date().toLocaleString()}
-==============================================`;
-};
-
-// Email helper functions
+//Email helper functions
 const createEmailTransporter = () => {
   try {
     const transporter = nodemailer.createTransport(SMTP_CONFIG);
@@ -312,6 +1167,206 @@ const validateEmailAddresses = (emails) => {
   });
 
   return { validEmails, errors };
+};
+
+// Function to send email to multiple recipients with CC support
+const sendEmail = async (
+  recipients,
+  subject,
+  body,
+  releaseId = null,
+  ccRecipients = null,
+  bccRecipients = null,
+  releaseData = null
+) => {
+  let transporter = null;
+
+  try {
+    transporter = createEmailTransporter();
+
+    // Validate TO recipients
+    const { validEmails: validToEmails, errors: toErrors } =
+      validateEmailAddresses(recipients);
+
+    // Validate CC recipients if provided
+    let validCcEmails = [];
+    let ccErrors = [];
+    if (ccRecipients && ccRecipients.length > 0) {
+      const ccValidation = validateEmailAddresses(ccRecipients);
+      validCcEmails = ccValidation.validEmails;
+      ccErrors = ccValidation.errors.map((err) => `CC: ${err}`);
+    }
+
+    // Validate BCC recipients if provided
+    let validBccEmails = [];
+    let bccErrors = [];
+    if (bccRecipients && bccRecipients.length > 0) {
+      const bccValidation = validateEmailAddresses(bccRecipients);
+      validBccEmails = bccValidation.validEmails;
+      bccErrors = bccValidation.errors.map((err) => `BCC: ${err}`);
+    }
+
+    // Combine all errors
+    const allErrors = [...toErrors, ...ccErrors, ...bccErrors];
+    if (allErrors.length > 0) {
+      throw new Error(`Email validation failed: ${allErrors.join("; ")}`);
+    }
+
+    // Check total recipient count
+    const totalRecipients =
+      validToEmails.length + validCcEmails.length + validBccEmails.length;
+    if (totalRecipients === 0) {
+      throw new Error("No valid recipients found");
+    }
+
+    if (totalRecipients > EMAIL_SETTINGS.maxRecipients) {
+      throw new Error(
+        `Total recipients (${totalRecipients}) exceeds maximum allowed (${EMAIL_SETTINGS.maxRecipients})`
+      );
+    }
+
+    // Email options optimized for Outlook
+    const mailOptions = {
+      from: `"${EMAIL_SETTINGS.fromName}" <${EMAIL_SETTINGS.fromEmail}>`,
+      to: validToEmails.join(", "),
+      subject: subject,
+      headers: {
+        "X-Release-ID": releaseId || "unknown",
+        "X-Mailer": "Release Management System v1.0",
+        "X-Priority": "3",
+        "X-MSMail-Priority": "Normal",
+        "MIME-Version": "1.0",
+      },
+    };
+
+    // Determine content type and set email content
+    const isReleaseNotification = releaseData && releaseData.release_version;
+
+    if (isReleaseNotification) {
+      // Fetch features for the release version
+      const features = await getReleaseVersionFeatures(
+        releaseData.release_version
+      );
+
+      console.log("📧 Using Release HTML Template");
+      console.log(`📋 Release: ${releaseData.release_version}`);
+      console.log(`🏢 Account: ${releaseData.account_name}`);
+      console.log(`📅 Date: ${releaseData.release_date}`);
+      console.log(`📊 Status: ${releaseData.status}`);
+      console.log(`🚀 Features: ${features.length} found`);
+
+      if (features.length > 0) {
+        console.log("Features included:");
+        features.forEach((feature, index) => {
+          console.log(
+            `  ${index + 1}. ${feature.name} [${feature.type || "Feature"}]${
+              feature.priority ? ` (${feature.priority})` : ""
+            }`
+          );
+        });
+      }
+
+      mailOptions.html = buildReleaseEmailTemplate(releaseData, features);
+      mailOptions.text = buildPlainTextReleaseEmail(releaseData, features);
+    } else {
+      // For regular emails, use the body as provided and create simple HTML wrapper
+      console.log("📧 Using Simple HTML Wrapper");
+      mailOptions.text = body;
+      mailOptions.html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Email</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        td { mso-line-height-rule: exactly; }
+    </style>
+    <![endif]-->
+</head>
+<body style="margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #333333; background-color: #f5f5f5;">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <tr>
+            <td>
+                <pre style="font-family: Arial, Helvetica, sans-serif; white-space: pre-wrap; word-wrap: break-word; margin: 0; font-size: 14px; line-height: 1.6;">${body}</pre>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
+    }
+
+    // Add CC if provided
+    if (validCcEmails.length > 0) {
+      mailOptions.cc = validCcEmails.join(", ");
+    }
+
+    // Add BCC if provided
+    if (validBccEmails.length > 0) {
+      mailOptions.bcc = validBccEmails.join(", ");
+    }
+
+    console.log(
+      `📤 Sending Outlook-compatible email to ${totalRecipients} total recipients:`
+    );
+    console.log(`📧 TO (${validToEmails.length}): ${validToEmails.join(", ")}`);
+    if (validCcEmails.length > 0) {
+      console.log(
+        `📧 CC (${validCcEmails.length}): ${validCcEmails.join(", ")}`
+      );
+    }
+    if (validBccEmails.length > 0) {
+      console.log(
+        `📧 BCC (${validBccEmails.length}): ${validBccEmails.join(", ")}`
+      );
+    }
+    console.log(`📋 Subject: ${subject}`);
+    console.log(
+      `📄 Content Type: ${
+        isReleaseNotification
+          ? "Release HTML Template with Features"
+          : "Simple HTML"
+      }`
+    );
+
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("✅ Email sent successfully");
+    console.log("📧 Message ID:", info.messageId);
+    console.log("📤 Response:", info.response);
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      response: info.response,
+      recipients: {
+        to: validToEmails,
+        cc: validCcEmails,
+        bcc: validBccEmails,
+      },
+      recipientCount: {
+        to: validToEmails.length,
+        cc: validCcEmails.length,
+        bcc: validBccEmails.length,
+        total: totalRecipients,
+      },
+      templateUsed: isReleaseNotification
+        ? "Release HTML Template with Features"
+        : "Simple HTML",
+      featuresIncluded: isReleaseNotification
+        ? await getReleaseVersionFeatures(releaseData.release_version)
+        : [],
+    };
+  } catch (error) {
+    console.error("❌ Email sending failed:", error);
+    throw error;
+  } finally {
+    if (transporter) {
+      transporter.close();
+    }
+  }
 };
 
 const app = express();
@@ -881,176 +1936,17 @@ app.get("/api/stats", async (req, res) => {
   }
 });
 
-// Function to send email to multiple recipients with CC support
-const sendEmail = async (
-  recipients,
-  subject,
-  body,
-  releaseId = null,
-  ccRecipients = null,
-  bccRecipients = null,
-  releaseData = null
-) => {
-  let transporter = null;
-
-  try {
-    transporter = createEmailTransporter();
-
-    // Validate TO recipients
-    const { validEmails: validToEmails, errors: toErrors } =
-      validateEmailAddresses(recipients);
-
-    // Validate CC recipients if provided
-    let validCcEmails = [];
-    let ccErrors = [];
-    if (ccRecipients && ccRecipients.length > 0) {
-      const ccValidation = validateEmailAddresses(ccRecipients);
-      validCcEmails = ccValidation.validEmails;
-      ccErrors = ccValidation.errors.map((err) => `CC: ${err}`);
-    }
-
-    // Validate BCC recipients if provided
-    let validBccEmails = [];
-    let bccErrors = [];
-    if (bccRecipients && bccRecipients.length > 0) {
-      const bccValidation = validateEmailAddresses(bccRecipients);
-      validBccEmails = bccValidation.validEmails;
-      bccErrors = bccValidation.errors.map((err) => `BCC: ${err}`);
-    }
-
-    // Combine all errors
-    const allErrors = [...toErrors, ...ccErrors, ...bccErrors];
-    if (allErrors.length > 0) {
-      throw new Error(`Email validation failed: ${allErrors.join("; ")}`);
-    }
-
-    // Check total recipient count
-    const totalRecipients =
-      validToEmails.length + validCcEmails.length + validBccEmails.length;
-    if (totalRecipients === 0) {
-      throw new Error("No valid recipients found");
-    }
-
-    if (totalRecipients > EMAIL_SETTINGS.maxRecipients) {
-      throw new Error(
-        `Total recipients (${totalRecipients}) exceeds maximum allowed (${EMAIL_SETTINGS.maxRecipients})`
-      );
-    }
-
-    // Email options optimized for Outlook
-    const mailOptions = {
-      from: `"${EMAIL_SETTINGS.fromName}" <${EMAIL_SETTINGS.fromEmail}>`,
-      to: validToEmails.join(", "),
-      subject: subject,
-      headers: {
-        "X-Release-ID": releaseId || "unknown",
-        "X-Mailer": "Release Management System v1.0",
-        "X-Priority": "3",
-        "X-MSMail-Priority": "Normal",
-        "MIME-Version": "1.0",
-      },
-    };
-
-    // Set content based on whether we have release data
-    if (releaseData) {
-      // Use the professional HTML template for release notifications
-      mailOptions.html = buildReleaseEmailTemplate(releaseData);
-      mailOptions.text = buildPlainTextReleaseEmail(releaseData);
-      console.log("Using release template for email content");
-    } else {
-      // For regular emails, use the body as plain text and create simple HTML
-      mailOptions.text = body;
-      mailOptions.html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Email</title>
-</head>
-<body style="margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #333333; background-color: #f5f5f5;">
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <tr>
-            <td>
-                <pre style="font-family: Arial, Helvetica, sans-serif; white-space: pre-wrap; word-wrap: break-word; margin: 0; font-size: 14px; line-height: 1.6;">${body}</pre>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>`;
-      console.log("Using simple HTML wrapper for email content");
-    }
-
-    // Add CC if provided
-    if (validCcEmails.length > 0) {
-      mailOptions.cc = validCcEmails.join(", ");
-    }
-
-    // Add BCC if provided
-    if (validBccEmails.length > 0) {
-      mailOptions.bcc = validBccEmails.join(", ");
-    }
-
-    console.log(
-      `Sending Outlook-compatible email to ${totalRecipients} total recipients:`
-    );
-    console.log(`TO (${validToEmails.length}): ${validToEmails.join(", ")}`);
-    if (validCcEmails.length > 0) {
-      console.log(`CC (${validCcEmails.length}): ${validCcEmails.join(", ")}`);
-    }
-    if (validBccEmails.length > 0) {
-      console.log(
-        `BCC (${validBccEmails.length}): ${validBccEmails.join(", ")}`
-      );
-    }
-    console.log(`Subject: ${subject}`);
-    console.log(
-      `Content Type: ${releaseData ? "Release Template" : "Simple HTML"}`
-    );
-
-    // Send email
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("Email sent successfully");
-    console.log("Message ID:", info.messageId);
-
-    return {
-      success: true,
-      messageId: info.messageId,
-      response: info.response,
-      recipients: {
-        to: validToEmails,
-        cc: validCcEmails,
-        bcc: validBccEmails,
-      },
-      recipientCount: {
-        to: validToEmails.length,
-        cc: validCcEmails.length,
-        bcc: validBccEmails.length,
-        total: totalRecipients,
-      },
-    };
-  } catch (error) {
-    console.error("Email sending failed:", error);
-    throw error;
-  } finally {
-    if (transporter) {
-      transporter.close();
-    }
-  }
-};
-
-// Email sending endpoint with CC/BCC support and template
+// Email sending endpoint with CC/BCC support and automatic template selection
 app.post("/api/send-email", async (req, res) => {
   try {
-    const { to, cc, bcc, subject, body, releaseId, useTemplate, releaseData } =
-      req.body;
+    const { to, cc, bcc, subject, body, releaseId, releaseData } = req.body;
 
     // Validate input
-    if (!to || !subject || !body) {
+    if (!to || !subject) {
       return res.status(400).json({
         error: "Missing required email fields",
-        required: ["to", "subject", "body"],
-        optional: ["cc", "bcc", "releaseId", "useTemplate", "releaseData"],
+        required: ["to", "subject"],
+        optional: ["cc", "bcc", "body", "releaseId", "releaseData"],
       });
     }
 
@@ -1079,23 +1975,45 @@ app.post("/api/send-email", async (req, res) => {
       });
     }
 
+    // Determine if we should use the release template
+    const useReleaseTemplate = releaseData && releaseData.release_version;
+
+    // If no body is provided and we have release data, we'll use the template
+    const emailBody =
+      body ||
+      (useReleaseTemplate
+        ? "Release notification details are provided in the formatted email below."
+        : "");
+
+    if (!emailBody && !useReleaseTemplate) {
+      return res.status(400).json({
+        error: "Either 'body' or 'releaseData' must be provided",
+      });
+    }
+
     console.log(`Processing email request:`);
     console.log(`TO: ${toRecipients.length} recipients`);
     console.log(`CC: ${ccRecipients.length} recipients`);
     console.log(`BCC: ${bccRecipients.length} recipients`);
     console.log(
-      `Template: ${useTemplate && releaseData ? "Enabled" : "Disabled"}`
+      `Template: ${useReleaseTemplate ? "Release Template" : "Plain Text"}`
     );
 
-    // Send email with or without template
+    if (useReleaseTemplate) {
+      console.log(`Release Version: ${releaseData.release_version}`);
+      console.log(`Account: ${releaseData.account_name}`);
+      console.log(`Status: ${releaseData.status}`);
+    }
+
+    // Send email - if releaseData is provided, it will automatically use the HTML template
     const result = await sendEmail(
       toRecipients,
       subject,
-      body,
+      emailBody,
       releaseId,
       ccRecipients,
       bccRecipients,
-      useTemplate && releaseData ? releaseData : null
+      useReleaseTemplate ? releaseData : null // This triggers the HTML template
     );
 
     // Log the email activity
@@ -1105,13 +2023,14 @@ app.post("/api/send-email", async (req, res) => {
       recipientCount: result.recipientCount,
       subject: subject,
       releaseId: releaseId,
-      template: useTemplate && releaseData ? "HTML" : "Plain Text",
+      template: useReleaseTemplate ? "Release HTML Template" : "Simple HTML",
       status: "sent",
-      method: "nodemailer-smtp-with-cc-bcc",
+      method: "nodemailer-smtp-with-template",
       smtpServer: SMTP_CONFIG.host,
       port: SMTP_CONFIG.port,
       messageId: result.messageId,
       platform: process.platform,
+      releaseVersion: useReleaseTemplate ? releaseData.release_version : null,
     };
 
     console.log("Email log:", emailLog);
@@ -1123,6 +2042,9 @@ app.post("/api/send-email", async (req, res) => {
       messageId: result.messageId,
       recipients: result.recipients,
       recipientCount: result.recipientCount,
+      templateUsed: useReleaseTemplate
+        ? "Release HTML Template"
+        : "Simple HTML",
     });
   } catch (error) {
     console.error("❌ Error sending email:", error);

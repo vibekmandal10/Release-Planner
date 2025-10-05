@@ -207,7 +207,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
             </div>
           </div>
 
-          {selectedReleaseVersion && (
+          {/* {selectedReleaseVersion && (
             <div className="filter-info-banner">
               <h3>
                 Showing data for:
@@ -218,7 +218,7 @@ const Dashboard = ({ releases, accounts, regions }) => {
                 {filteredReleases.length !== 1 ? "s" : ""} found
               </p>
             </div>
-          )}
+          )} */}
         </div>
       </div>
 
