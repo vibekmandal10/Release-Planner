@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 const ReleaseTable = ({
   releases,
@@ -10,10 +10,34 @@ const ReleaseTable = ({
   readOnly = false,
 }) => {
   const [filters, setFilters] = useState({
+    product: "",
+    environment: "",
     release_version: "",
     account_region: "",
     status: "",
   });
+
+  // Static filter options - these never change regardless of current filters
+  const filterOptions = useMemo(() => {
+    // Define static options that don't depend on current data
+    const staticProducts = ["Monitoring", "SRE"];
+    const staticEnvironments = ["PROD", "DR", "DEV", "UAT"];
+    const staticStatuses = ["Scheduled", "In Progress", "Completed", "Blocked"];
+    
+    // Get unique release versions from regions (assuming this is your source)
+    const releaseVersions = regions.map(region => region.name);
+    
+    // Get unique regions from accounts
+    const accountRegions = [...new Set(accounts.map(acc => acc.region))].filter(Boolean);
+
+    return {
+      products: staticProducts,
+      environments: staticEnvironments,
+      releaseVersions: releaseVersions,
+      accountRegions: accountRegions,
+      statuses: staticStatuses
+    };
+  }, [regions, accounts]); // Only depends on regions and accounts, not releases
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -52,7 +76,6 @@ const ReleaseTable = ({
     };
     setFilters(newFilters);
 
-    // Always call onFilter if it exists
     if (onFilter) {
       onFilter(newFilters);
     }
@@ -60,13 +83,14 @@ const ReleaseTable = ({
 
   const clearFilters = () => {
     const emptyFilters = {
+      product: "",
+      environment: "",
       release_version: "",
       account_region: "",
       status: "",
     };
     setFilters(emptyFilters);
 
-    // Always call onFilter if it exists
     if (onFilter) {
       onFilter(emptyFilters);
     }
@@ -77,24 +101,43 @@ const ReleaseTable = ({
     return account ? account.region : "";
   };
 
-  const uniqueRegions = [...new Set(accounts.map((acc) => acc.region))].filter(
-    Boolean
-  );
-
   return (
     <div className="table-container">
-      {/* Header for read-only view */}
-      {/* {readOnly && (
-        <div className="section-header">
-          <h3>📋 All Releases (Read Only)</h3>
-          <div className="read-only-badge">👁️ View Only Mode</div>
-        </div>
-      )} */}
-
       {/* Filters */}
       <div className="filters-section">
-        {/* <h3>🔍 Filters</h3> */}
         <div className="filters-grid">
+          <div className="filter-group">
+            <label>Product:</label>
+            <select
+              name="product"
+              value={filters.product}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Products</option>
+              {filterOptions.products.map((product) => (
+                <option key={product} value={product}>
+                  {product}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Environment:</label>
+            <select
+              name="environment"
+              value={filters.environment}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Environments</option>
+              {filterOptions.environments.map((environment) => (
+                <option key={environment} value={environment}>
+                  {environment}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="filter-group">
             <label>Release Version:</label>
             <select
@@ -103,9 +146,9 @@ const ReleaseTable = ({
               onChange={handleFilterChange}
             >
               <option value="">All Versions</option>
-              {regions.map((region) => (
-                <option key={region.id} value={region.name}>
-                  {region.name}
+              {filterOptions.releaseVersions.map((version) => (
+                <option key={version} value={version}>
+                  {version}
                 </option>
               ))}
             </select>
@@ -119,7 +162,7 @@ const ReleaseTable = ({
               onChange={handleFilterChange}
             >
               <option value="">All Regions</option>
-              {uniqueRegions.map((region) => (
+              {filterOptions.accountRegions.map((region) => (
                 <option key={region} value={region}>
                   {region}
                 </option>
@@ -135,10 +178,15 @@ const ReleaseTable = ({
               onChange={handleFilterChange}
             >
               <option value="">All Statuses</option>
-              <option value="Scheduled">📅 Scheduled</option>
-              <option value="In Progress">⚡ In Progress</option>
-              <option value="Completed">✅ Completed</option>
-              <option value="Canceled">🚫 Blocked</option>
+              {filterOptions.statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "Scheduled" && "📅 "}
+                  {status === "In Progress" && "⚡ "}
+                  {status === "Completed" && "✅ "}
+                  {status === "Blocked" && "🚫 "}
+                  {status}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -150,16 +198,10 @@ const ReleaseTable = ({
         </div>
       </div>
 
-      {/* Results count
-      <div className="results-info">
-        <p>
-          📊 Showing {releases.length} release{releases.length !== 1 ? "s" : ""}
-        </p>
-      </div> */}
-
       <table className="releases-table">
         <thead>
           <tr>
+            <th>Product/Env</th>
             <th>Release Version</th>
             <th>Account Name</th>
             <th>Region</th>
@@ -172,6 +214,11 @@ const ReleaseTable = ({
         <tbody>
           {releases.map((release) => (
             <tr key={release.id}>
+              <td className="">
+                <strong>
+                  {release.product}/{release.environment}
+                </strong>
+              </td>
               <td className="release-version">
                 <span className="version-badge">
                   🏷️ {release.release_version || "N/A"}
@@ -194,8 +241,8 @@ const ReleaseTable = ({
               </td>
               <td className="notes-cell">
                 {release.completion_notes
-                  ? `  ${release.completion_notes} `
-                  : `${release.notes}`}
+                  ? `${release.completion_notes}`
+                  : `${release.notes || ''}`}
               </td>
             </tr>
           ))}

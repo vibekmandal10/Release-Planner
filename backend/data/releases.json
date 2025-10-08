@@ -29,11 +29,13 @@
         "status": "Open"
       }
     ],
-    "updated_at": "2025-10-05T08:35:23.587Z"
+    "updated_at": "2025-10-07T10:00:39.527Z",
+    "product": "Monitoring",
+    "environment": "PROD"
   },
   {
     "id": 2,
-    "account_name": "VIL",
+    "account_name": "PLDT",
     "release_date": "2025-10-30",
     "executor": "Kishan",
     "status": "Scheduled",
@@ -46,7 +48,9 @@
     "defect_details": "",
     "completion_notes": "",
     "defects": [],
-    "updated_at": "2025-10-03T17:51:10.559Z"
+    "updated_at": "2025-10-07T10:42:43.043Z",
+    "product": "Monitoring",
+    "environment": "PROD"
   },
   {
     "id": 3,
@@ -57,7 +61,7 @@
     "notes": "",
     "release_version": "R24.05",
     "created_at": "2025-10-03T13:45:14.853Z",
-    "updated_at": "2025-10-03T16:21:20.899Z",
+    "updated_at": "2025-10-07T10:41:59.519Z",
     "completion_date": "2025-10-03",
     "time_taken_hours": "5",
     "defects_raised": "1",
@@ -71,7 +75,9 @@
         "severity": "Medium",
         "status": "Open"
       }
-    ]
+    ],
+    "product": "Monitoring",
+    "environment": "PROD"
   },
   {
     "id": 4,
@@ -88,11 +94,13 @@
     "completion_notes": "",
     "defects": [],
     "created_at": "2025-10-03T16:22:21.313Z",
-    "updated_at": "2025-10-03T16:22:21.313Z"
+    "updated_at": "2025-10-07T10:41:20.106Z",
+    "product": "SRE",
+    "environment": "DEV"
   },
   {
     "id": 5,
-    "account_name": "3UK",
+    "account_name": "3IR",
     "release_date": "2025-10-08",
     "executor": "Vibek Mandal",
     "status": "Blocked",
@@ -105,11 +113,13 @@
     "completion_notes": "",
     "defects": [],
     "created_at": "2025-10-03T16:23:10.273Z",
-    "updated_at": "2025-10-03T17:27:53.356Z"
+    "updated_at": "2025-10-07T10:40:57.680Z",
+    "product": "Monitoring",
+    "environment": "PROD"
   },
   {
     "id": 6,
-    "account_name": "3UK",
+    "account_name": "CHARTER",
     "release_date": "2025-10-03",
     "executor": "Yachana",
     "status": "In Progress",
@@ -122,6 +132,8 @@
     "completion_notes": "",
     "defects": [],
     "created_at": "2025-10-03T16:24:37.287Z",
-    "updated_at": "2025-10-05T08:09:31.312Z"
+    "updated_at": "2025-10-07T10:42:28.882Z",
+    "product": "Monitoring",
+    "environment": "DR"
   }
 ]

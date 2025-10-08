@@ -8,7 +8,9 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
     status: "Scheduled",
     notes: "",
     release_version: "",
-    // New fields for completion tracking
+    product: "", // New field for product selection
+    environment: "", // New field for environment selection
+    // Completion tracking fields
     completion_date: "",
     time_taken_hours: "",
     defects_raised: "",
@@ -16,8 +18,22 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
     completion_notes: "",
   });
 
+  // Available products and environments
+  const availableProducts = [
+    { id: 1, name: "Monitoring", icon: "📊" },
+    { id: 2, name: "SRE", icon: "🔧" },
+  ];
+
+  const availableEnvironments = [
+    { id: 1, name: "PROD", icon: "🔴" },
+    { id: 2, name: "DR", icon: "🟠" },
+    { id: 3, name: "DEV", icon: "🟢" },
+    { id: 4, name: "UAT", icon: "🟡" },
+  ];
+
   // Separate state for managing individual defects
   const [defects, setDefects] = useState([]);
+  const [filteredAccounts, setFilteredAccounts] = useState(accounts);
 
   useEffect(() => {
     if (release) {
@@ -28,7 +44,9 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
         status: release.status,
         notes: release.notes || "",
         release_version: release.release_version || "",
-        // New fields
+        product: release.product || "",
+        environment: release.environment || "",
+        // Completion fields
         completion_date: release.completion_date || "",
         time_taken_hours: release.time_taken_hours || "",
         defects_raised: release.defects_raised || "",
@@ -40,7 +58,6 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
       if (release.defects && Array.isArray(release.defects)) {
         setDefects(release.defects);
       } else if (release.defect_details) {
-        // Legacy support - convert old defect_details to new format
         setDefects([
           {
             id: 1,
@@ -53,6 +70,29 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
       }
     }
   }, [release]);
+
+  // Filter accounts based on selected product
+  useEffect(() => {
+    if (formData.product) {
+      const filtered = accounts.filter(
+        (account) =>
+          account.products && account.products.includes(formData.product)
+      );
+      // setFilteredAccounts(filtered);
+
+      // Reset account selection if current account doesn't support selected product
+      if (formData.account_name) {
+        const currentAccount = accounts.find(
+          (acc) => acc.name === formData.account_name
+        );
+        if (!currentAccount?.products?.includes(formData.product)) {
+          setFormData((prev) => ({ ...prev, account_name: "" }));
+        }
+      }
+    } else {
+      setFilteredAccounts(accounts);
+    }
+  }, [formData.product, accounts]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -76,7 +116,7 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
   // Defect management functions
   const addDefect = () => {
     const newDefect = {
-      id: Date.now(), // Simple ID generation
+      id: Date.now(),
       defect_id: "",
       description: "",
       severity: "Medium",
@@ -97,20 +137,19 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
     );
   };
 
-  const generateDefectId = (accountName) => {
-    if (!accountName) return "";
-
-    // Get account prefix (first 3-4 characters)
-    const prefix = accountName.substring(0, 4).toUpperCase();
-
-    // Generate random number
-    const randomNum = Math.floor(Math.random() * 9000) + 1000;
-
-    return `${prefix}-${randomNum}`;
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Basic validation
+    if (!formData.product) {
+      alert("Please select a product (Monitoring or SRE)");
+      return;
+    }
+
+    if (!formData.environment) {
+      alert("Please select an environment (PROD, DR, DEV, or UAT)");
+      return;
+    }
 
     // Validation for completed releases
     if (formData.status === "Completed") {
@@ -143,28 +182,38 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
       ...formData,
       defects_raised: defects.length.toString(),
       defects: defects,
-      // Keep legacy field for backward compatibility
       defect_details: defects
         .map((d) => `${d.defect_id}: ${d.description}`)
         .join("; "),
     };
 
-    // Debug: Log the data being sent
-    console.log('Submitting release data:', submitData);
-
+    console.log("Submitting release data:", submitData);
     onSave(submitData);
   };
 
   const isCompleted = formData.status === "Completed";
   const isBlocked = formData.status === "Blocked";
 
+  const getProductIcon = (productName) => {
+    const product = availableProducts.find((p) => p.name === productName);
+    return product ? product.icon : "📦";
+  };
+
+  const getEnvironmentIcon = (envName) => {
+    const env = availableEnvironments.find((e) => e.name === envName);
+    return env ? env.icon : "⚪";
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <h2>{release ? "✏️ Edit Release" : "➕ Schedule New Release"}</h2>
         <form onSubmit={handleSubmit}>
+          {/* Release Version Selection */}
           <div className="form-group">
-            <label>Release Version:</label>
+            <label>
+              Release Version: <span className="required">*</span>
+            </label>
             <select
               name="release_version"
               value={formData.release_version}
@@ -180,25 +229,110 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
             </select>
           </div>
 
+          {/* Product Selection */}
           <div className="form-group">
-            <label>Account Name:</label>
+            <label>
+              Product: <span className="required">*</span>
+            </label>
             <select
-              name="account_name"
-              value={formData.account_name}
+              name="product"
+              value={formData.product}
               onChange={handleChange}
               required
             >
-              <option value="">Select Account</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.name}>
-                  {account.name} ({account.region})
+              <option value="">Select Product</option>
+              {availableProducts.map((product) => (
+                <option key={product.id} value={product.name}>
+                  {product.name}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Environment Selection */}
           <div className="form-group">
-            <label>Planned Release Date:</label>
+            <label>
+              Environment: <span className="required">*</span>
+            </label>
+            <select
+              name="environment"
+              value={formData.environment}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Environment</option>
+              {availableEnvironments.map((env) => (
+                <option key={env.id} value={env.name}>
+                  {env.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Account Selection - Filtered by Product */}
+          <div className="form-group">
+            <label>
+              Account Name: <span className="required">*</span>
+            </label>
+            <select
+              name="account_name"
+              value={formData.account_name}
+              onChange={handleChange}
+              required
+              disabled={!formData.product}
+            >
+              <option value="">
+                {!formData.product
+                  ? "Select a product first"
+                  : `Select Account (${filteredAccounts.length} available)`}
+              </option>
+              {filteredAccounts.map((account) => (
+                <option key={account.id} value={account.name}>
+                  {account.name} ({account.region})
+                </option>
+              ))}
+            </select>
+            {formData.product && filteredAccounts.length === 0 && (
+              <div className="validation-message">
+                No accounts found with {formData.product} product. Please check
+                account configurations.
+              </div>
+            )}
+          </div>
+
+          {/* Release Summary */}
+          {/* {formData.product &&
+            formData.environment &&
+            formData.account_name && (
+              <div className="release-summary">
+                <h4>📋 Release Summary</h4>
+                <div className="summary-content">
+                  <div className="summary-item">
+                    <span className="summary-label">Product:</span>
+                    <span className="summary-value">{formData.product}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Environment:</span>
+                    <span className="summary-value">
+                      {getEnvironmentIcon(formData.environment)}{" "}
+                      {formData.environment}
+                    </span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Account:</span>
+                    <span className="summary-value">
+                      🏢 {formData.account_name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )} */}
+
+          {/* Planned Release Date */}
+          <div className="form-group">
+            <label>
+              Planned Release Date: <span className="required">*</span>
+            </label>
             <input
               type="date"
               name="release_date"
@@ -208,8 +342,11 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
             />
           </div>
 
+          {/* Executor */}
           <div className="form-group">
-            <label>Executor:</label>
+            <label>
+              Executor: <span className="required">*</span>
+            </label>
             <input
               type="text"
               name="executor"
@@ -220,6 +357,7 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
             />
           </div>
 
+          {/* Status */}
           <div className="form-group">
             <label>Status:</label>
             <select
@@ -273,6 +411,127 @@ const ReleaseForm = ({ accounts, regions, release, onSave, onCancel }) => {
               </div>
 
               {/* Defects Management Section */}
+              {/* <div className="defects-section">
+                <div className="defects-header">
+                  <h4>🐛 Defects Tracking</h4>
+                  <button
+                    type="button"
+                    className="btn btn-add-defect"
+                    onClick={addDefect}
+                  >
+                    ➕ Add Defect
+                  </button>
+                </div>
+
+                {defects.length === 0 ? (
+                  <div className="no-defects">
+                    <p>✅ No defects raised during this release</p>
+                  </div>
+                ) : (
+                  <div className="defects-list">
+                    {defects.map((defect, index) => (
+                      <div key={defect.id} className="defect-item">
+                        <div className="defect-header">
+                          <span className="defect-number">
+                            Defect #{index + 1}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-remove-defect"
+                            onClick={() => removeDefect(defect.id)}
+                            title="Remove Defect"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+
+                        <div className="defect-form">
+                          <div className="defect-row">
+                            <div className="defect-field">
+                              <label>
+                                Defect ID: <span className="required">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={defect.defect_id}
+                                onChange={(e) =>
+                                  updateDefect(
+                                    defect.id,
+                                    "defect_id",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="e.g., ACMP-1234"
+                                required
+                              />
+                            </div>
+
+                            <div className="defect-field">
+                              <label>Severity:</label>
+                              <select
+                                value={defect.severity}
+                                onChange={(e) =>
+                                  updateDefect(
+                                    defect.id,
+                                    "severity",
+                                    e.target.value
+                                  )
+                                }
+                              >
+                                <option value="Low">🟢 Low</option>
+                                <option value="Medium">🟡 Medium</option>
+                                <option value="High">🟠 High</option>
+                                <option value="Critical">🔴 Critical</option>
+                              </select>
+                            </div>
+
+                            <div className="defect-field">
+                              <label>Status:</label>
+                              <select
+                                value={defect.status}
+                                onChange={(e) =>
+                                  updateDefect(
+                                    defect.id,
+                                    "status",
+                                    e.target.value
+                                  )
+                                }
+                              >
+                                <option value="Open">📂 Open</option>
+                                <option value="In Progress">
+                                  ⚡ In Progress
+                                </option>
+                                <option value="Fixed">✅ Fixed</option>
+                                <option value="Closed">🔒 Closed</option>
+                                <option value="Rejected">❌ Rejected</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="defect-field">
+                            <label>
+                              Description: <span className="required">*</span>
+                            </label>
+                            <textarea
+                              value={defect.description}
+                              onChange={(e) =>
+                                updateDefect(
+                                  defect.id,
+                                  "description",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Describe the defect in detail..."
+                              rows="2"
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div> */}
               <div className="defects-section">
                 <div className="defects-header">
                   {/* <img

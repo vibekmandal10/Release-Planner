@@ -6,10 +6,12 @@ const AccountManager = ({ accounts, onDataUpdate }) => {
   const [formData, setFormData] = useState({
     name: "",
     region: "",
+    products: [], // Changed back to products array
   });
   const [filterRegion, setFilterRegion] = useState("");
 
   const regions = ["APAC", "CALA", "EMEA", "Cluster M", "Cluster R"];
+  const products = ["Monitoring", "SRE"];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +37,7 @@ const AccountManager = ({ accounts, onDataUpdate }) => {
       await onDataUpdate();
       setShowForm(false);
       setEditingAccount(null);
-      setFormData({ name: "", region: "" });
+      setFormData({ name: "", region: "", products: [] });
     } catch (error) {
       alert(`Error: ${error.message}`);
     }
@@ -46,6 +48,7 @@ const AccountManager = ({ accounts, onDataUpdate }) => {
     setFormData({
       name: account.name,
       region: account.region,
+      products: account.products || [],
     });
     setShowForm(true);
   };
@@ -72,7 +75,7 @@ const AccountManager = ({ accounts, onDataUpdate }) => {
   const handleCancel = () => {
     setShowForm(false);
     setEditingAccount(null);
-    setFormData({ name: "", region: "" });
+    setFormData({ name: "", region: "", products: [] });
   };
 
   const filteredAccounts = filterRegion
@@ -141,6 +144,53 @@ const AccountManager = ({ accounts, onDataUpdate }) => {
                 ))}
               </select>
             </div>
+            <div className="form-group">
+              <label>Products:</label>
+              <div className="checkbox-group horizontal">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.products?.includes("Monitoring") || false}
+                    onChange={(e) => {
+                      const products = formData.products || [];
+                      if (e.target.checked) {
+                        setFormData({
+                          ...formData,
+                          products: [...products, "Monitoring"],
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          products: products.filter((p) => p !== "Monitoring"),
+                        });
+                      }
+                    }}
+                  />
+                  Monitoring
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.products?.includes("SRE") || false}
+                    onChange={(e) => {
+                      const products = formData.products || [];
+                      if (e.target.checked) {
+                        setFormData({
+                          ...formData,
+                          products: [...products, "SRE"],
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          products: products.filter((p) => p !== "SRE"),
+                        });
+                      }
+                    }}
+                  />
+                  SRE
+                </label>
+              </div>
+            </div>
             <div className="form-actions">
               <button type="submit" className="btn btn-primary">
                 {editingAccount ? "💾 Update" : "➕ Add"} Account
@@ -182,6 +232,7 @@ const AccountManager = ({ accounts, onDataUpdate }) => {
               <tr>
                 <th>Account Name</th>
                 <th>Region</th>
+                <th>Products</th>
                 <th>Created</th>
                 <th>Actions</th>
               </tr>
@@ -193,6 +244,7 @@ const AccountManager = ({ accounts, onDataUpdate }) => {
                     <strong>{account.name}</strong>
                   </td>
                   <td>{account.region}</td>
+                  <td>{account.products?.join(", ") || "-"}</td>
                   <td>{new Date(account.created_at).toLocaleDateString()}</td>
                   <td>
                     <button

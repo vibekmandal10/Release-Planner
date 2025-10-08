@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 const ReleaseTable = ({
   releases,
@@ -10,10 +10,19 @@ const ReleaseTable = ({
   readOnly = false,
 }) => {
   const [filters, setFilters] = useState({
+    product: "",
+    environment: "",
     release_version: "",
     account_region: "",
     status: "",
   });
+  
+  // Add sorting state
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: 'asc'
+  });
+
   const [emailModal, setEmailModal] = useState({
     isOpen: false,
     release: null,
@@ -24,6 +33,111 @@ const ReleaseTable = ({
   const [emailCcRecipients, setEmailCcRecipients] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+
+  // Static filter options that don't change based on current filters
+  const filterOptions = useMemo(() => {
+    // Define static options
+    const staticProducts = ["Monitoring", "SRE"];
+    const staticEnvironments = ["PROD", "DR", "DEV", "UAT"];
+    const staticStatuses = ["Scheduled", "In Progress", "Completed", "Blocked"];
+    
+    // Get release versions from regions data (static)
+    const releaseVersions = regions.map(region => region.name);
+    
+    // Get unique regions from accounts (static)
+    const accountRegions = [...new Set(accounts.map(acc => acc.region))].filter(Boolean);
+
+    return {
+      products: staticProducts,
+      environments: staticEnvironments,
+      releaseVersions: releaseVersions,
+      accountRegions: accountRegions,
+      statuses: staticStatuses
+    };
+  }, [regions, accounts]);
+
+  // Sorting function
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Sort releases based on current sort configuration
+  const sortedReleases = useMemo(() => {
+    if (!sortConfig.key) return releases;
+
+    return [...releases].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortConfig.key) {
+        case 'product_environment':
+          aValue = `${a.product}/${a.environment}`;
+          bValue = `${b.product}/${b.environment}`;
+          break;
+        case 'release_version':
+          aValue = a.release_version || '';
+          bValue = b.release_version || '';
+          break;
+        case 'account_name':
+          aValue = a.account_name || '';
+          bValue = b.account_name || '';
+          break;
+        case 'region':
+          aValue = getAccountRegion(a.account_name) || '';
+          bValue = getAccountRegion(b.account_name) || '';
+          break;
+        case 'release_date':
+          aValue = new Date(a.release_date);
+          bValue = new Date(b.release_date);
+          break;
+        case 'executor':
+          aValue = a.executor || '';
+          bValue = b.executor || '';
+          break;
+        case 'status':
+          aValue = a.status || '';
+          bValue = b.status || '';
+          break;
+        case 'defects':
+          aValue = a.defects?.length ? a.defects.map(d => d.defect_id).join(', ') : '';
+          bValue = b.defects?.length ? b.defects.map(d => d.defect_id).join(', ') : '';
+          break;
+        default:
+          aValue = a[sortConfig.key] || '';
+          bValue = b[sortConfig.key] || '';
+      }
+
+      // Handle date sorting
+      if (sortConfig.key === 'release_date') {
+        if (sortConfig.direction === 'asc') {
+          return aValue - bValue;
+        } else {
+          return bValue - aValue;
+        }
+      }
+
+      // Handle string sorting
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
+
+      if (sortConfig.direction === 'asc') {
+        return aStr.localeCompare(bStr);
+      } else {
+        return bStr.localeCompare(aStr);
+      }
+    });
+  }, [releases, sortConfig, accounts]);
+
+  // Get sort icon for column headers
+  const getSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return '↕️'; // Default sort icon
+    }
+    return sortConfig.direction === 'asc' ? '↑' : '↓';
+  };
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -69,6 +183,8 @@ const ReleaseTable = ({
 
   const clearFilters = () => {
     const emptyFilters = {
+      product: "",
+      environment: "",
       release_version: "",
       account_region: "",
       status: "",
@@ -85,6 +201,22 @@ const ReleaseTable = ({
     return account ? account.region : "";
   };
 
+  // Get unique products from releases
+  const uniqueProducts = [
+    ...new Set(releases.map((release) => release.product)),
+  ].filter(Boolean);
+
+  // Get unique environments from releases
+  const uniqueEnvironments = [
+    ...new Set(releases.map((release) => release.environment)),
+  ].filter(Boolean);
+
+  // Get unique release versions from releases
+  const uniqueReleaseVersions = [
+    ...new Set(releases.map((release) => release.release_version)),
+  ].filter(Boolean);
+
+  // Get unique regions from accounts
   const uniqueRegions = [...new Set(accounts.map((acc) => acc.region))].filter(
     Boolean
   );
@@ -98,7 +230,6 @@ const ReleaseTable = ({
       isLoading: false,
     });
 
-    // Pre-populate email subject and body
     const emailSubject = `Release Notification - ${release.release_version} for ${release.account_name}`;
     const emailBody = generateEmailBody(release);
 
@@ -224,7 +355,6 @@ Release Management Team
     try {
       setEmailModal((prev) => ({ ...prev, isLoading: true }));
 
-      // Parse recipients
       const parseRecipients = (recipients) => {
         if (!recipients || !recipients.trim()) return [];
         return recipients
@@ -247,7 +377,6 @@ Release Management Team
         return;
       }
 
-      // Prepare release data for the HTML template
       const releaseData = {
         id: emailModal.release.id,
         release_version: emailModal.release.release_version || "N/A",
@@ -271,24 +400,12 @@ Release Management Team
         to: toRecipients,
         subject: emailSubject,
         releaseId: emailModal.release.id,
-        releaseData: releaseData, // Send release data instead of body
-        // body: emailBody, // Remove this - backend will generate from template
+        releaseData: releaseData,
       };
 
-      // Add CC if provided
       if (ccRecipients.length > 0) {
         emailData.cc = ccRecipients;
       }
-
-      console.log("📧 Sending email with release data:", {
-        recipients: {
-          to: toRecipients.length,
-          cc: ccRecipients.length,
-        },
-        releaseVersion: releaseData.release_version,
-        account: releaseData.account_name,
-        useTemplate: true,
-      });
 
       const response = await fetch("/api/send-email", {
         method: "POST",
@@ -332,6 +449,38 @@ Release Management Team
       <div className="filters-section">
         <div className="filters-grid">
           <div className="filter-group">
+            <label>Product:</label>
+            <select
+              name="product"
+              value={filters.product}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Products</option>
+              {filterOptions.products.map((product) => (
+                <option key={product} value={product}>
+                  {product}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Environment:</label>
+            <select
+              name="environment"
+              value={filters.environment}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Environments</option>
+              {filterOptions.environments.map((environment) => (
+                <option key={environment} value={environment}>
+                  {environment}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
             <label>Release Version:</label>
             <select
               name="release_version"
@@ -339,9 +488,9 @@ Release Management Team
               onChange={handleFilterChange}
             >
               <option value="">All Versions</option>
-              {regions.map((region) => (
-                <option key={region.id} value={region.name}>
-                  {region.name}
+              {filterOptions.releaseVersions.map((version) => (
+                <option key={version} value={version}>
+                  {version}
                 </option>
               ))}
             </select>
@@ -355,7 +504,7 @@ Release Management Team
               onChange={handleFilterChange}
             >
               <option value="">All Regions</option>
-              {uniqueRegions.map((region) => (
+              {filterOptions.accountRegions.map((region) => (
                 <option key={region} value={region}>
                   {region}
                 </option>
@@ -371,10 +520,15 @@ Release Management Team
               onChange={handleFilterChange}
             >
               <option value="">All Statuses</option>
-              <option value="Scheduled">📅 Scheduled</option>
-              <option value="In Progress">⚡ In Progress</option>
-              <option value="Completed">✅ Completed</option>
-              <option value="Canceled">🚫 Blocked</option>
+              {filterOptions.statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "Scheduled" && "📅 "}
+                  {status === "In Progress" && "⚡ "}
+                  {status === "Completed" && "✅ "}
+                  {status === "Blocked" && "🚫 "}
+                  {status}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -389,22 +543,78 @@ Release Management Team
       <table className="releases-table">
         <thead>
           <tr>
-            <th>Release Version</th>
-            <th>Account Name</th>
-            <th>Region</th>
-            <th>Release Date</th>
-            <th>Executor</th>
-            <th>Status</th>
-            <th>Notes</th>
+            <th 
+              onClick={() => handleSort('product_environment')}
+              className="sortable-header"
+              title="Click to sort by Product/Environment"
+            >
+              Product/Env {getSortIcon('product_environment')}
+            </th>
+            <th 
+              onClick={() => handleSort('release_version')}
+              className="sortable-header"
+              title="Click to sort by Release Version"
+            >
+              Release Version {getSortIcon('release_version')}
+            </th>
+            <th 
+              onClick={() => handleSort('account_name')}
+              className="sortable-header"
+              title="Click to sort by Account Name"
+            >
+              Account Name {getSortIcon('account_name')}
+            </th>
+            <th 
+              onClick={() => handleSort('region')}
+              className="sortable-header"
+              title="Click to sort by Region"
+            >
+              Region {getSortIcon('region')}
+            </th>
+            <th 
+              onClick={() => handleSort('release_date')}
+              className="sortable-header"
+              title="Click to sort by Release Date"
+            >
+              Release Date {getSortIcon('release_date')}
+            </th>
+            <th 
+              onClick={() => handleSort('executor')}
+              className="sortable-header"
+              title="Click to sort by Executor"
+            >
+              Executor {getSortIcon('executor')}
+            </th>
+            <th 
+              onClick={() => handleSort('status')}
+              className="sortable-header"
+              title="Click to sort by Status"
+            >
+              Status {getSortIcon('status')}
+            </th>
+            <th 
+              onClick={() => handleSort('defects')}
+              className="sortable-header"
+              title="Click to sort by Defects"
+            >
+              Defect {getSortIcon('defects')}
+            </th>
+
+            {/* <th>Notes</th> */}
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {releases.map((release) => (
+          {sortedReleases.map((release) => (
             <tr key={release.id}>
+              <td className="">
+                <strong>
+                  {release.product}/{release.environment}
+                </strong>
+              </td>
               <td className="release-version">
                 <span className="version-badge">
-                  🏷️ {release.release_version || "N/A"}
+                  {release.release_version || "N/A"}
                 </span>
               </td>
               <td className="account-name">
@@ -422,11 +632,18 @@ Release Management Team
                   {getStatusIcon(release.status)} {release.status}
                 </span>
               </td>
-              <td className="notes-cell">
+              <td className="region-info">
+                <strong>
+                  {release.defects?.length
+                    ? release.defects.map((d) => d.defect_id).join(", ")
+                    : ""}
+                </strong>
+              </td>
+              {/* <td className="notes-cell">
                 {release.completion_notes
                   ? `  ${release.completion_notes} `
                   : `${release.notes}`}
-              </td>
+              </td> */}
               <td className="actions-cell">
                 <button
                   className="btn btn-sm btn-email"
@@ -542,21 +759,6 @@ Release Management Team
                     required
                   />
                 </div>
-
-                <div className="email-preview">
-                  <label htmlFor="emailBody">
-                    📄 Message: <span className="required">*</span>
-                  </label>
-                  <textarea
-                    id="emailBody"
-                    value={emailBody}
-                    onChange={(e) => setEmailBody(e.target.value)}
-                    placeholder="Email message content"
-                    rows="12"
-                    className="email-body"
-                    required
-                  />
-                </div>
               </div>
             </div>
 
@@ -587,7 +789,7 @@ Release Management Team
         </div>
       )}
 
-      {releases.length === 0 && (
+      {sortedReleases.length === 0 && (
         <div className="empty-state">
           <p>📋 No releases found matching the current filters.</p>
           {Object.values(filters).some((filter) => filter) && (

@@ -854,23 +854,7 @@ const buildReleaseEmailTemplate = (releaseData, features = []) => {
                                                         `
                                                             : ""
                                                         }
-                                                        <tr>
-                                                            <td style="padding: 12px 0;">
-                                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                                                    <tr>
-                                                                        <td style="width: 160px; vertical-align: top;">
-                                                                            <strong style="color: #5f6368; font-size: 14px; font-weight: 600;">🔷 Defects:</strong>
-                                                                        </td>
-                                                                        <td>
-                                                                            <span style="color: #202124; font-size: 15px; font-weight: 600;">${
-                                                                              releaseData.defects_raised ||
-                                                                              "0"
-                                                                            }</span>
-                                                                        </td>
-                                                                    </tr>
-                                                                </table>
-                                                            </td>
-                                                        </tr>
+                                                        
                                                     </table>
                                                 </td>
                                             </tr>
@@ -1372,12 +1356,19 @@ const sendEmail = async (
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Data directory
+const DATA_DIR = path.join(__dirname, "data");
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
+// Serve static files from the React app build directory
+const buildPath = path.join(__dirname, "build");
+app.use(express.static(buildPath));
+
 // File paths
-const DATA_DIR = path.join(__dirname, "data");
+// const DATA_DIR = path.join(__dirname, "data");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const RELEASES_FILE = path.join(DATA_DIR, "releases.json");
 const AVAILABLE_RELEASES_FILE = path.join(DATA_DIR, "available_releases.json"); // Use available_releases.json
@@ -1645,23 +1636,85 @@ app.get("/api/accounts", async (req, res) => {
 });
 
 // Add new account
+// app.post("/api/accounts", async (req, res) => {
+//   try {
+//     const { name, region } = req.body;
+//     const accounts = await readAccounts();
+
+//     // Check if account already exists
+//     if (accounts.find((acc) => acc.name.toLowerCase() === name.toLowerCase())) {
+//       return res.status(400).json({ error: "Account already exists" });
+//     }
+
+//     const newId = Math.max(...accounts.map((a) => a.id), 0) + 1;
+//     const newAccount = {
+//       id: newId,
+//       name: name.toUpperCase(),
+//       region: region || "",
+//       created_at: new Date().toISOString(),
+//     };
+//     accounts.push(newAccount);
+//     await writeAccounts(accounts);
+//     res.json(newAccount);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+// Update account
+// app.put("/api/accounts/:id", async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { name, region } = req.body;
+//     const accounts = await readAccounts();
+//     const index = accounts.findIndex((a) => a.id === parseInt(id));
+
+//     if (index === -1) {
+//       return res.status(404).json({ error: "Account not found" });
+//     }
+
+//     // Check if name already exists (excluding current account)
+//     if (
+//       accounts.find(
+//         (acc) =>
+//           acc.name.toLowerCase() === name.toLowerCase() &&
+//           acc.id !== parseInt(id)
+//       )
+//     ) {
+//       return res.status(400).json({ error: "Account name already exists" });
+//     }
+
+//     accounts[index] = {
+//       ...accounts[index],
+//       name: name.toUpperCase(),
+//       region: region || "",
+//       updated_at: new Date().toISOString(),
+//     };
+
+//     await writeAccounts(accounts);
+//     res.json({ message: "Account updated successfully" });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+// Update the POST /api/accounts endpoint
 app.post("/api/accounts", async (req, res) => {
   try {
-    const { name, region } = req.body;
+    const { name, region, products } = req.body; // Add products to destructuring
+
     const accounts = await readAccounts();
-
-    // Check if account already exists
-    if (accounts.find((acc) => acc.name.toLowerCase() === name.toLowerCase())) {
-      return res.status(400).json({ error: "Account already exists" });
-    }
-
     const newId = Math.max(...accounts.map((a) => a.id), 0) + 1;
+
     const newAccount = {
       id: newId,
-      name: name.toUpperCase(),
-      region: region || "",
+      name,
+      region,
+      products: products || [], // Add products field with default empty array
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
+
     accounts.push(newAccount);
     await writeAccounts(accounts);
     res.json(newAccount);
@@ -1670,43 +1723,33 @@ app.post("/api/accounts", async (req, res) => {
   }
 });
 
-// Update account
+// Update the PUT /api/accounts/:id endpoint
 app.put("/api/accounts/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, region } = req.body;
-    const accounts = await readAccounts();
-    const index = accounts.findIndex((a) => a.id === parseInt(id));
+    const { name, region, products } = req.body; // Add products to destructuring
 
-    if (index === -1) {
+    const accounts = await readAccounts();
+    const accountIndex = accounts.findIndex((a) => a.id === parseInt(id));
+
+    if (accountIndex === -1) {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    // Check if name already exists (excluding current account)
-    if (
-      accounts.find(
-        (acc) =>
-          acc.name.toLowerCase() === name.toLowerCase() &&
-          acc.id !== parseInt(id)
-      )
-    ) {
-      return res.status(400).json({ error: "Account name already exists" });
-    }
-
-    accounts[index] = {
-      ...accounts[index],
-      name: name.toUpperCase(),
-      region: region || "",
+    accounts[accountIndex] = {
+      ...accounts[accountIndex],
+      name,
+      region,
+      products: products || [], // Add products field with default empty array
       updated_at: new Date().toISOString(),
     };
 
     await writeAccounts(accounts);
-    res.json({ message: "Account updated successfully" });
+    res.json(accounts[accountIndex]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 // Delete account
 app.delete("/api/accounts/:id", async (req, res) => {
   try {
@@ -1738,9 +1781,23 @@ app.delete("/api/accounts/:id", async (req, res) => {
 app.get("/api/releases", async (req, res) => {
   try {
     const releases = await readReleases();
-    const { release_version, account_region, status } = req.query;
+    const { product, environment, release_version, account_region, status } = req.query;
 
     let filteredReleases = releases;
+
+    // Filter by product
+    if (product) {
+      filteredReleases = filteredReleases.filter(
+        (r) => r.product === product
+      );
+    }
+
+    // Filter by environment
+    if (environment) {
+      filteredReleases = filteredReleases.filter(
+        (r) => r.environment === environment
+      );
+    }
 
     // Filter by release version
     if (release_version) {
@@ -1776,6 +1833,110 @@ app.get("/api/releases", async (req, res) => {
 });
 
 // Update the POST endpoint for creating releases
+// app.post("/api/releases", async (req, res) => {
+//   try {
+//     const {
+//       account_name,
+//       release_date,
+//       executor,
+//       status,
+//       notes,
+//       release_version,
+//       // Add new completion tracking fields
+//       completion_date,
+//       time_taken_hours,
+//       defects_raised,
+//       defect_details,
+//       completion_notes,
+//       defects, // New defects array
+//     } = req.body;
+
+//     const releases = await readReleases();
+//     const newId = Math.max(...releases.map((r) => r.id), 0) + 1;
+
+//     const newRelease = {
+//       id: newId,
+//       account_name,
+//       release_date,
+//       executor,
+//       status: status || "Scheduled",
+//       notes: notes || "",
+//       release_version: release_version || "",
+//       // Add new fields
+//       completion_date: completion_date || null,
+//       time_taken_hours: time_taken_hours || null,
+//       defects_raised: defects_raised || "0",
+//       defect_details: defect_details || "",
+//       completion_notes: completion_notes || "",
+//       defects: defects || [], // Store defects array
+//       created_at: new Date().toISOString(),
+//       updated_at: new Date().toISOString(),
+//     };
+
+//     releases.push(newRelease);
+//     await writeReleases(releases);
+//     res.json(newRelease);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+// Update the PUT endpoint for updating releases
+// app.put("/api/releases/:id", async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const {
+//       account_name,
+//       release_date,
+//       executor,
+//       status,
+//       notes,
+//       release_version,
+//       // Add new completion tracking fields
+//       completion_date,
+//       time_taken_hours,
+//       defects_raised,
+//       defect_details,
+//       completion_notes,
+//       defects, // New defects array
+//     } = req.body;
+
+//     const releases = await readReleases();
+//     const index = releases.findIndex((r) => r.id === parseInt(id));
+
+//     if (index === -1) {
+//       return res.status(404).json({ error: "Release not found" });
+//     }
+
+//     releases[index] = {
+//       ...releases[index],
+//       account_name,
+//       release_date,
+//       executor,
+//       status,
+//       notes: notes || "",
+//       release_version: release_version || "",
+//       // Update new fields
+//       completion_date: completion_date || null,
+//       time_taken_hours: time_taken_hours || null,
+//       defects_raised: defects_raised || "0",
+//       defect_details: defect_details || "",
+//       completion_notes: completion_notes || "",
+//       defects: defects || [], // Update defects array
+//       updated_at: new Date().toISOString(),
+//     };
+
+//     await writeReleases(releases);
+//     res.json({
+//       message: "Release updated successfully",
+//       release: releases[index],
+//     });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+// Update the POST /api/releases endpoint
 app.post("/api/releases", async (req, res) => {
   try {
     const {
@@ -1785,13 +1946,15 @@ app.post("/api/releases", async (req, res) => {
       status,
       notes,
       release_version,
-      // Add new completion tracking fields
+      product, // Add product field
+      environment, // Add environment field
+      // Completion tracking fields
       completion_date,
       time_taken_hours,
       defects_raised,
       defect_details,
       completion_notes,
-      defects, // New defects array
+      defects, // Defects array
     } = req.body;
 
     const releases = await readReleases();
@@ -1805,7 +1968,9 @@ app.post("/api/releases", async (req, res) => {
       status: status || "Scheduled",
       notes: notes || "",
       release_version: release_version || "",
-      // Add new fields
+      product: product || "", // Add product field
+      environment: environment || "", // Add environment field
+      // Completion fields
       completion_date: completion_date || null,
       time_taken_hours: time_taken_hours || null,
       defects_raised: defects_raised || "0",
@@ -1824,7 +1989,7 @@ app.post("/api/releases", async (req, res) => {
   }
 });
 
-// Update the PUT endpoint for updating releases
+// Update the PUT /api/releases/:id endpoint
 app.put("/api/releases/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -1835,13 +2000,15 @@ app.put("/api/releases/:id", async (req, res) => {
       status,
       notes,
       release_version,
-      // Add new completion tracking fields
+      product, // Add product field
+      environment, // Add environment field
+      // Completion tracking fields
       completion_date,
       time_taken_hours,
       defects_raised,
       defect_details,
       completion_notes,
-      defects, // New defects array
+      defects, // Defects array
     } = req.body;
 
     const releases = await readReleases();
@@ -1859,7 +2026,9 @@ app.put("/api/releases/:id", async (req, res) => {
       status,
       notes: notes || "",
       release_version: release_version || "",
-      // Update new fields
+      product: product || "", // Add product field
+      environment: environment || "", // Add environment field
+      // Update completion fields
       completion_date: completion_date || null,
       time_taken_hours: time_taken_hours || null,
       defects_raised: defects_raised || "0",
@@ -2186,6 +2355,11 @@ Release Management System`;
   }
 });
 
+// The "catchall" handler: send back React's index.html file for any non-API routes
+app.get("*", (req, res) => {
+  res.sendFile(path.join(buildPath, "index.html"));
+});
+
 // Initialize data on startup
 initializeData()
   .then(() => {
@@ -2195,6 +2369,20 @@ initializeData()
       console.log(`🚀 Release Planning Server running on port ${PORT}`);
       console.log(`📊 Dashboard: http://localhost:${PORT}`);
       console.log(`📁 Data stored in: ${DATA_DIR}`);
+      console.log(`🌐 Frontend build path: ${buildPath}`);
+
+      // Check if build directory exists
+      const fs = require("fs");
+      if (fs.existsSync(buildPath)) {
+        console.log(`✅ Build directory found`);
+        if (fs.existsSync(path.join(buildPath, "index.html"))) {
+          console.log(`✅ index.html found`);
+        } else {
+          console.log(`❌ index.html NOT found`);
+        }
+      } else {
+        console.log(`❌ Build directory NOT found at: ${buildPath}`);
+      }
     });
   })
   .catch((err) => {
