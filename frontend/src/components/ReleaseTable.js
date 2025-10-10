@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 
 const ReleaseTable = ({
   releases,
@@ -16,12 +16,15 @@ const ReleaseTable = ({
     account_region: "",
     status: "",
   });
-  
+
   // Add sorting state
   const [sortConfig, setSortConfig] = useState({
     key: null,
-    direction: 'asc'
+    direction: "asc",
   });
+
+  // Add a state to track if this is the initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const [emailModal, setEmailModal] = useState({
     isOpen: false,
@@ -34,33 +37,79 @@ const ReleaseTable = ({
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
+  // Move getAccountRegion function here, before it's used in sortedReleases
+  const getAccountRegion = (accountName) => {
+    const account = accounts.find((acc) => acc.name === accountName);
+    return account ? account.region : "";
+  };
+
   // Static filter options that don't change based on current filters
   const filterOptions = useMemo(() => {
     // Define static options
     const staticProducts = ["Monitoring", "SRE"];
     const staticEnvironments = ["PROD", "DR", "DEV", "UAT"];
     const staticStatuses = ["Scheduled", "In Progress", "Completed", "Blocked"];
-    
-    // Get release versions from regions data (static)
-    const releaseVersions = regions.map(region => region.name);
-    
+
+    // Get release versions from regions data and sort in descending order
+    const releaseVersions = regions
+      .map((region) => region.name)
+      .sort((a, b) => {
+        // Custom sorting for release versions (assuming format like R25.09, R25.10, etc.)
+        // Extract the numeric part for proper sorting
+        const getVersionNumber = (version) => {
+          const match = version.match(/R(\d+)\.(\d+)/);
+          if (match) {
+            return parseFloat(`${match[1]}.${match[2]}`);
+          }
+          return 0;
+        };
+
+        const aNum = getVersionNumber(a);
+        const bNum = getVersionNumber(b);
+
+        // Sort in descending order (latest first)
+        return bNum - aNum;
+      });
+
     // Get unique regions from accounts (static)
-    const accountRegions = [...new Set(accounts.map(acc => acc.region))].filter(Boolean);
+    const accountRegions = [
+      ...new Set(accounts.map((acc) => acc.region)),
+    ].filter(Boolean);
 
     return {
       products: staticProducts,
       environments: staticEnvironments,
       releaseVersions: releaseVersions,
       accountRegions: accountRegions,
-      statuses: staticStatuses
+      statuses: staticStatuses,
     };
   }, [regions, accounts]);
 
+  // Set default release version to the latest one when component mounts or regions change
+  useEffect(() => {
+    if (isInitialLoad && filterOptions.releaseVersions.length > 0) {
+      const latestVersion = filterOptions.releaseVersions[0];
+      setFilters((prev) => ({
+        ...prev,
+        release_version: latestVersion,
+      }));
+
+      if (onFilter) {
+        onFilter({
+          ...filters,
+          release_version: latestVersion,
+        });
+      }
+
+      setIsInitialLoad(false); // Mark initial load as complete
+    }
+  }, [filterOptions.releaseVersions, isInitialLoad]);
+
   // Sorting function
   const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
     }
     setSortConfig({ key, direction });
   };
@@ -73,46 +122,50 @@ const ReleaseTable = ({
       let aValue, bValue;
 
       switch (sortConfig.key) {
-        case 'product_environment':
+        case "product_environment":
           aValue = `${a.product}/${a.environment}`;
           bValue = `${b.product}/${b.environment}`;
           break;
-        case 'release_version':
-          aValue = a.release_version || '';
-          bValue = b.release_version || '';
+        case "release_version":
+          aValue = a.release_version || "";
+          bValue = b.release_version || "";
           break;
-        case 'account_name':
-          aValue = a.account_name || '';
-          bValue = b.account_name || '';
+        case "account_name":
+          aValue = a.account_name || "";
+          bValue = b.account_name || "";
           break;
-        case 'region':
-          aValue = getAccountRegion(a.account_name) || '';
-          bValue = getAccountRegion(b.account_name) || '';
+        case "region":
+          aValue = getAccountRegion(a.account_name) || "";
+          bValue = getAccountRegion(b.account_name) || "";
           break;
-        case 'release_date':
+        case "release_date":
           aValue = new Date(a.release_date);
           bValue = new Date(b.release_date);
           break;
-        case 'executor':
-          aValue = a.executor || '';
-          bValue = b.executor || '';
+        case "executor":
+          aValue = a.executor || "";
+          bValue = b.executor || "";
           break;
-        case 'status':
-          aValue = a.status || '';
-          bValue = b.status || '';
+        case "status":
+          aValue = a.status || "";
+          bValue = b.status || "";
           break;
-        case 'defects':
-          aValue = a.defects?.length ? a.defects.map(d => d.defect_id).join(', ') : '';
-          bValue = b.defects?.length ? b.defects.map(d => d.defect_id).join(', ') : '';
+        case "defects":
+          aValue = a.defects?.length
+            ? a.defects.map((d) => d.defect_id).join(", ")
+            : "";
+          bValue = b.defects?.length
+            ? b.defects.map((d) => d.defect_id).join(", ")
+            : "";
           break;
         default:
-          aValue = a[sortConfig.key] || '';
-          bValue = b[sortConfig.key] || '';
+          aValue = a[sortConfig.key] || "";
+          bValue = b[sortConfig.key] || "";
       }
 
       // Handle date sorting
-      if (sortConfig.key === 'release_date') {
-        if (sortConfig.direction === 'asc') {
+      if (sortConfig.key === "release_date") {
+        if (sortConfig.direction === "asc") {
           return aValue - bValue;
         } else {
           return bValue - aValue;
@@ -123,7 +176,7 @@ const ReleaseTable = ({
       const aStr = String(aValue).toLowerCase();
       const bStr = String(bValue).toLowerCase();
 
-      if (sortConfig.direction === 'asc') {
+      if (sortConfig.direction === "asc") {
         return aStr.localeCompare(bStr);
       } else {
         return bStr.localeCompare(aStr);
@@ -134,9 +187,9 @@ const ReleaseTable = ({
   // Get sort icon for column headers
   const getSortIcon = (columnKey) => {
     if (sortConfig.key !== columnKey) {
-      return '↕️'; // Default sort icon
+      return " ";
     }
-    return sortConfig.direction === 'asc' ? '↑' : '↓';
+    return sortConfig.direction === "asc" ? "▲" : "▼";
   };
 
   const getStatusClass = (status) => {
@@ -181,11 +234,12 @@ const ReleaseTable = ({
     }
   };
 
+  // Modify clearFilters to allow "All Versions" selection
   const clearFilters = () => {
     const emptyFilters = {
       product: "",
       environment: "",
-      release_version: "",
+      release_version: "", // Allow empty selection for "All Versions"
       account_region: "",
       status: "",
     };
@@ -194,11 +248,6 @@ const ReleaseTable = ({
     if (onFilter) {
       onFilter(emptyFilters);
     }
-  };
-
-  const getAccountRegion = (accountName) => {
-    const account = accounts.find((acc) => acc.name === accountName);
-    return account ? account.region : "";
   };
 
   // Get unique products from releases
@@ -490,7 +539,10 @@ Release Management Team
               <option value="">All Versions</option>
               {filterOptions.releaseVersions.map((version) => (
                 <option key={version} value={version}>
-                  {version}
+                  {version}{" "}
+                  {filterOptions.releaseVersions.indexOf(version) === 0
+                    ? "(Latest)"
+                    : ""}
                 </option>
               ))}
             </select>
@@ -519,7 +571,7 @@ Release Management Team
               value={filters.status}
               onChange={handleFilterChange}
             >
-              <option value="">All Statuses</option>
+              <option value="">All Status</option>
               {filterOptions.statuses.map((status) => (
                 <option key={status} value={status}>
                   {status === "Scheduled" && "📅 "}
@@ -543,61 +595,62 @@ Release Management Team
       <table className="releases-table">
         <thead>
           <tr>
-            <th 
-              onClick={() => handleSort('product_environment')}
+            <th
+              onClick={() => handleSort("product_environment")}
               className="sortable-header"
               title="Click to sort by Product/Environment"
             >
-              Product/Env {getSortIcon('product_environment')}
+              Product/Env {getSortIcon("product_environment")}
             </th>
-            <th 
-              onClick={() => handleSort('release_version')}
+            <th
+              onClick={() => handleSort("release_version")}
               className="sortable-header"
               title="Click to sort by Release Version"
             >
-              Release Version {getSortIcon('release_version')}
+              Release{getSortIcon("release_version")}
             </th>
-            <th 
-              onClick={() => handleSort('account_name')}
-              className="sortable-header"
-              title="Click to sort by Account Name"
-            >
-              Account Name {getSortIcon('account_name')}
-            </th>
-            <th 
-              onClick={() => handleSort('region')}
+            <th
+              onClick={() => handleSort("region")}
               className="sortable-header"
               title="Click to sort by Region"
             >
-              Region {getSortIcon('region')}
+              Region {getSortIcon("region")}
             </th>
-            <th 
-              onClick={() => handleSort('release_date')}
+            <th
+              onClick={() => handleSort("account_name")}
+              className="sortable-header"
+              title="Click to sort by Account Name"
+            >
+              Account{getSortIcon("account_name")}
+            </th>
+
+            <th
+              onClick={() => handleSort("release_date")}
               className="sortable-header"
               title="Click to sort by Release Date"
             >
-              Release Date {getSortIcon('release_date')}
+              Release Date {getSortIcon("release_date")}
             </th>
-            <th 
-              onClick={() => handleSort('executor')}
+            <th
+              onClick={() => handleSort("executor")}
               className="sortable-header"
               title="Click to sort by Executor"
             >
-              Executor {getSortIcon('executor')}
+              Focal {getSortIcon("executor")}
             </th>
-            <th 
-              onClick={() => handleSort('status')}
+            <th
+              onClick={() => handleSort("status")}
               className="sortable-header"
               title="Click to sort by Status"
             >
-              Status {getSortIcon('status')}
+              Status {getSortIcon("status")}
             </th>
-            <th 
-              onClick={() => handleSort('defects')}
+            <th
+              onClick={() => handleSort("defects")}
               className="sortable-header"
               title="Click to sort by Defects"
             >
-              Defect {getSortIcon('defects')}
+              Defect {getSortIcon("defects")}
             </th>
 
             {/* <th>Notes</th> */}
@@ -617,12 +670,13 @@ Release Management Team
                   {release.release_version || "N/A"}
                 </span>
               </td>
-              <td className="account-name">
-                <strong>{release.account_name}</strong>
-              </td>
               <td className="region-info">
                 {getAccountRegion(release.account_name)}
               </td>
+              <td className="account-name">
+                <strong>{release.account_name}</strong>
+              </td>
+
               <td>{new Date(release.release_date).toLocaleDateString()}</td>
               <td>👤 {release.executor}</td>
               <td>

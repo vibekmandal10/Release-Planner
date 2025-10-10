@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "./DefectsDashboard.css";
 
 const DefectsDashboard = ({ releases, accounts, regions }) => {
@@ -10,6 +10,45 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
     status: "",
   });
   const [defectStats, setDefectStats] = useState({});
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Add sorting state
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "asc",
+  });
+
+  // Get sorted release versions (latest first)
+  const sortedReleaseVersions = useMemo(() => {
+    return regions
+      .map((region) => region.name)
+      .sort((a, b) => {
+        const getVersionNumber = (version) => {
+          const match = version.match(/R(\d+)\.(\d+)/);
+          if (match) {
+            return parseFloat(`${match[1]}.${match[2]}`);
+          }
+          return 0;
+        };
+
+        const aNum = getVersionNumber(a);
+        const bNum = getVersionNumber(b);
+
+        return bNum - aNum; // Descending order (latest first)
+      });
+  }, [regions]);
+
+  // Set default release version to latest on initial load
+  useEffect(() => {
+    if (isInitialLoad && sortedReleaseVersions.length > 0) {
+      const latestVersion = sortedReleaseVersions[0];
+      setFilters((prev) => ({
+        ...prev,
+        release_version: latestVersion,
+      }));
+      setIsInitialLoad(false);
+    }
+  }, [sortedReleaseVersions, isInitialLoad]);
 
   useEffect(() => {
     calculateDefectStats();
@@ -18,7 +57,15 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
 
   const calculateDefectStats = () => {
     const completedReleases = releases.filter((r) => r.status === "Completed");
-    const allDefects = completedReleases.flatMap((release) =>
+
+    // Filter by selected release version if specified
+    const releasesToAnalyze = filters.release_version
+      ? completedReleases.filter(
+          (r) => r.release_version === filters.release_version
+        )
+      : completedReleases;
+
+    const allDefects = releasesToAnalyze.flatMap((release) =>
       (release.defects || []).map((defect) => ({
         ...defect,
         account_name: release.account_name,
@@ -28,10 +75,10 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
 
     const stats = {
       totalDefects: allDefects.length,
-      totalReleases: completedReleases.length,
+      totalReleases: releasesToAnalyze.length,
       defectRate:
-        completedReleases.length > 0
-          ? (allDefects.length / completedReleases.length).toFixed(2)
+        releasesToAnalyze.length > 0
+          ? (allDefects.length / releasesToAnalyze.length).toFixed(2)
           : 0,
       severityBreakdown: allDefects.reduce((acc, defect) => {
         acc[defect.severity] = (acc[defect.severity] || 0) + 1;
@@ -85,6 +132,83 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
     setFilteredDefects(allDefects);
   };
 
+  // Sorting function
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Sort defects based on current sort configuration
+  const sortedDefects = useMemo(() => {
+    if (!sortConfig.key) return filteredDefects;
+
+    return [...filteredDefects].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortConfig.key) {
+        case "account_name":
+          aValue = a.account_name || "";
+          bValue = b.account_name || "";
+          break;
+        case "release_version":
+          aValue = a.release_version || "";
+          bValue = b.release_version || "";
+          break;
+        case "defect_id":
+          aValue = a.defect_id || "";
+          bValue = b.defect_id || "";
+          break;
+        case "severity":
+          // Custom sorting for severity (Critical > High > Medium > Low)
+          const severityOrder = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+          aValue = severityOrder[a.severity] || 0;
+          bValue = severityOrder[b.severity] || 0;
+          break;
+        case "status":
+          aValue = a.status || "";
+          bValue = b.status || "";
+          break;
+        case "description":
+          aValue = a.description || "";
+          bValue = b.description || "";
+          break;
+        default:
+          aValue = a[sortConfig.key] || "";
+          bValue = b[sortConfig.key] || "";
+      }
+
+      // Handle numeric sorting for severity
+      if (sortConfig.key === "severity") {
+        if (sortConfig.direction === "asc") {
+          return aValue - bValue;
+        } else {
+          return bValue - aValue;
+        }
+      }
+
+      // Handle string sorting
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
+
+      if (sortConfig.direction === "asc") {
+        return aStr.localeCompare(bStr);
+      } else {
+        return bStr.localeCompare(aStr);
+      }
+    });
+  }, [filteredDefects, sortConfig]);
+
+  // Get sort icon for column headers
+  const getSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return " ";
+    }
+    return sortConfig.direction === "asc" ? "▲" : "▼";
+  };
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({
@@ -94,9 +218,13 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
   };
 
   const clearFilters = () => {
+    // Reset to latest version instead of empty
+    const latestVersion =
+      sortedReleaseVersions.length > 0 ? sortedReleaseVersions[0] : "";
+
     setFilters({
       account_name: "",
-      release_version: "",
+      release_version: latestVersion,
       severity: "",
       status: "",
     });
@@ -146,38 +274,15 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
       <div className="dashboard-header">
         <div className="dashboard-title">
           <h2>Defects Analytics Dashboard</h2>
-          <p>Comprehensive view of all defects across completed releases</p>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="stats-grid">
-        <div className="stat-card defect">
-          <h3>Total Defects</h3>
-          <div className="stat-number">{defectStats.totalDefects || 0}</div>
-          <div className="stat-label">Across All Releases</div>
-        </div>
-
-        {/* <div className="stat-card in-progress">
-          <h3>Defect Rate</h3>
-          <div className="stat-number">{defectStats.defectRate || 0}</div>
-          <div className="stat-label">Defects per Release</div>
-        </div> */}
-
-        <div className="stat-card scheduled">
-          <h3>Open Defects</h3>
-          <div className="stat-number">
-            {defectStats.statusBreakdown?.Open || 0}
-          </div>
-          <div className="stat-label">Need Attention</div>
-        </div>
-
-        <div className="stat-card done">
-          <h3>Fixed Defects</h3>
-          <div className="stat-number">
-            {defectStats.statusBreakdown?.Fixed || 0}
-          </div>
-          <div className="stat-label">Successfully Resolved</div>
+          <p>
+            {filters.release_version
+              ? `Showing defects for ${filters.release_version} ${
+                  sortedReleaseVersions.indexOf(filters.release_version) === 0
+                    ? "(Latest)"
+                    : ""
+                }`
+              : "Comprehensive view of all defects across completed releases"}
+          </p>
         </div>
       </div>
 
@@ -209,9 +314,12 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
               onChange={handleFilterChange}
             >
               <option value="">All Versions</option>
-              {regions.map((region) => (
-                <option key={region.id} value={region.name}>
-                  {region.name}
+              {sortedReleaseVersions.map((version) => (
+                <option key={version} value={version}>
+                  {version}{" "}
+                  {sortedReleaseVersions.indexOf(version) === 0
+                    ? "(Latest)"
+                    : ""}
                 </option>
               ))}
             </select>
@@ -225,10 +333,125 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
               onChange={handleFilterChange}
             >
               <option value="">All Severities</option>
-              <option value="Low">🟢 Low</option>
-              <option value="Medium">🟡 Medium</option>
-              <option value="High">🟠 High</option>
               <option value="Critical">🔴 Critical</option>
+              <option value="High">🟠 High</option>
+              <option value="Medium">🟡 Medium</option>
+              <option value="Low">🟢 Low</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Status:</label>
+            <select
+              name="status"
+              value={filters.status}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Status</option>
+              <option value="Open">📂 Open</option>
+              <option value="In Progress">⚡ In Progress</option>
+              <option value="Fixed">✅ Fixed</option>
+              <option value="Closed">🔒 Closed</option>
+              <option value="Rejected">❌ Rejected</option>
+            </select>
+          </div>
+
+          <div className="filter-actions">
+            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+              🔄 Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="stats-grid">
+        <div className="stat-card defect">
+          <h3>Total Defects</h3>
+          <div className="stat-number">{defectStats.totalDefects || 0}</div>
+          <div className="stat-label">
+            {filters.release_version
+              ? `In ${filters.release_version}`
+              : "Across All Releases"}
+          </div>
+        </div>
+
+        <div className="stat-card scheduled">
+          <h3>Open Defects</h3>
+          <div className="stat-number">
+            {defectStats.statusBreakdown?.Open || 0}
+          </div>
+          <div className="stat-label">Need Attention</div>
+        </div>
+
+        <div className="stat-card done">
+          <h3>Fixed Defects</h3>
+          <div className="stat-number">
+            {defectStats.statusBreakdown?.Fixed || 0}
+          </div>
+          <div className="stat-label">Successfully Resolved</div>
+        </div>
+
+        {/* <div className="stat-card in-progress">
+          <h3>Critical Defects</h3>
+          <div className="stat-number">
+            {defectStats.severityBreakdown?.Critical || 0}
+          </div>
+          <div className="stat-label">High Priority Issues</div>
+        </div> */}
+      </div>
+
+      {/* Filters Section */}
+      {/* <div className="filters-section">
+        <h3>🔍 Filter Defects</h3>
+        <div className="filters-grid">
+          <div className="filter-group">
+            <label>Account:</label>
+            <select
+              name="account_name"
+              value={filters.account_name}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Accounts</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.name}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Release Version:</label>
+            <select
+              name="release_version"
+              value={filters.release_version}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Versions</option>
+              {sortedReleaseVersions.map((version) => (
+                <option key={version} value={version}>
+                  {version}{" "}
+                  {sortedReleaseVersions.indexOf(version) === 0
+                    ? "(Latest)"
+                    : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Severity:</label>
+            <select
+              name="severity"
+              value={filters.severity}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Severities</option>
+              <option value="Critical">🔴 Critical</option>
+              <option value="High">🟠 High</option>
+              <option value="Medium">🟡 Medium</option>
+              <option value="Low">🟢 Low</option>
             </select>
           </div>
 
@@ -254,7 +477,7 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
             </button>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Results Info */}
       {(filters.account_name ||
@@ -263,7 +486,7 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
         filters.status) && (
         <div className="results-info">
           <p>
-            Showing {filteredDefects.length} defect(s)
+            Showing {sortedDefects.length} defect(s)
             {filters.account_name && ` for ${filters.account_name}`}
             {filters.release_version && ` in ${filters.release_version}`}
             {filters.severity && ` with ${filters.severity} severity`}
@@ -272,9 +495,9 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
         </div>
       )}
 
-      {/* Simplified Defects Table with Release Version */}
+      {/* Sortable Defects Table */}
       <div className="table-container">
-        {filteredDefects.length === 0 ? (
+        {sortedDefects.length === 0 ? (
           <div className="empty-state">
             <p>
               {releases.filter((r) => r.status === "Completed").length === 0
@@ -286,16 +509,52 @@ const DefectsDashboard = ({ releases, accounts, regions }) => {
           <table className="releases-table">
             <thead>
               <tr>
-                <th>Account</th>
-                <th>Release Version</th>
-                <th>Defect ID</th>
-                <th>Severity</th>
-                <th>Status</th>
-                <th>Description</th>
+                <th
+                  onClick={() => handleSort("account_name")}
+                  className="sortable-header"
+                  title="Click to sort by Account"
+                >
+                  Account {getSortIcon("account_name")}
+                </th>
+                <th
+                  onClick={() => handleSort("release_version")}
+                  className="sortable-header"
+                  title="Click to sort by Release Version"
+                >
+                  Release Version {getSortIcon("release_version")}
+                </th>
+                <th
+                  onClick={() => handleSort("defect_id")}
+                  className="sortable-header"
+                  title="Click to sort by Defect ID"
+                >
+                  Defect ID {getSortIcon("defect_id")}
+                </th>
+                <th
+                  onClick={() => handleSort("severity")}
+                  className="sortable-header"
+                  title="Click to sort by Severity"
+                >
+                  Severity {getSortIcon("severity")}
+                </th>
+                <th
+                  onClick={() => handleSort("status")}
+                  className="sortable-header"
+                  title="Click to sort by Status"
+                >
+                  Status {getSortIcon("status")}
+                </th>
+                <th
+                  onClick={() => handleSort("description")}
+                  className="sortable-header"
+                  title="Click to sort by Description"
+                >
+                  Description {getSortIcon("description")}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredDefects.map((defect, index) => (
+              {sortedDefects.map((defect, index) => (
                 <tr key={`${defect.account_name}-${defect.id}-${index}`}>
                   <td>
                     <span className="account-name">{defect.account_name}</span>

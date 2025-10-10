@@ -111,6 +111,15 @@ body {
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+.nav-logo {
+  /* margin-right: 1rem; */
+  text-align: center;
+}
+.nav-logo-img {
+  margin-top: 10px;
+  width: 30px;
+  /* height: 25px; */
+}
 
 .main-content {
   padding: 2rem;
@@ -133,9 +142,9 @@ body {
 
 @media screen and (max-width: 1366px) {
   .dashboard {
-    transform: scale(0.5);
+    transform: scale(0.75);
     transform-origin: top left;
-    width: 200%; /* compensate for the scale shrink */
+    width: 133%;
     height: 100vh;
   }
 }
@@ -222,15 +231,18 @@ body {
 .upcoming-list {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
 .upcoming-item {
-  padding: 1.5rem;
+  padding: 0 1rem;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: #f9f9f9;
   transition: all 0.3s ease;
+  width: 200px;
+  position: relative;
 }
 
 .upcoming-item:hover {
@@ -240,10 +252,11 @@ body {
 
 .release-info {
   display: flex;
+  flex-direction: column;
 
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+  /* align-items: center; */
+  margin-top: 0.5rem;
 }
 
 .release-date {
@@ -259,12 +272,54 @@ body {
   color: #666;
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
+  /* margin-top: 0.5rem; */
 }
 
-.notes {
+/* .notes {
   color: #555;
   font-size: 0.9rem;
   font-style: italic;
+  max-width: 180px;
+  max-height: 40px; 
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  line-height: 1.4;
+  font-size: 13px;
+  color: #666;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #ffc107;
+  cursor: help;
+} */
+.notes {
+  max-width: 180px;
+  max-height: 40px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+}
+
+.notes:hover {
+  position: absolute;
+  z-index: 1000;
+  max-width: 300px;
+  max-height: none;
+  overflow: visible;
+  -webkit-line-clamp: none;
+  display: block;
+  background: #ffffff;
+  border: 2px solid #ffc107;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+  white-space: normal;
+  word-wrap: break-word;
+  padding: 12px 16px;
+  border-radius: 8px;
 }
 
 /* Actions Bar */
@@ -406,6 +461,7 @@ body {
 
 .release-version {
   font-weight: 600;
+  width: 150px;
 }
 
 .region-info {
@@ -2929,4 +2985,39 @@ body {
   border-radius: 6px;
   padding: 1rem;
   background-color: #f8f9fa;
+}
+
+/* Release details layout */
+/* .release-details1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e9ecef;
+} */
+
+.dashboard-release-version {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 5px 8px;
+  /* border-radius: 12px; */
+  border-radius: 10px 0px;
+  font-size: 12px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  /* width: 150px; */
+  position: absolute;
+  top: -2px;
+  left: -1px;
+}
+
+.account-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+  padding: 5px 10px;
+  /* background-color: red; */
 }

@@ -181,7 +181,7 @@ function AppContent() {
             accounts={accounts}
             onEdit={() => {}} // Read-only for non-admin users
             onDelete={() => {}} // Read-only for non-admin users
-            onFilter={handleFilter}
+            // onFilter={handleFilter}
             readOnly={isReadOnly()} // Pass read-only flag based on user role
           />
         );
@@ -222,6 +222,13 @@ function AppContent() {
         <div className="header-content">
           <div className="header-left">
             <nav className="nav-tabs">
+              <div className="nav-logo">
+                <img
+                  src="/images/logo.png"
+                  alt="Logo"
+                  className="nav-logo-img"
+                />
+              </div>
               {getAvailableTabs().map((tab) => (
                 <button
                   key={tab.id}
