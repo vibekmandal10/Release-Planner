@@ -1,36 +1,57 @@
+# ============================
+# Stage 1 — Build Frontend
+# ============================
+FROM node:18-alpine AS build-frontend
 
-# Use official Node.js runtime as base image
+# Set working directory
+WORKDIR /frontend
+
+# Copy and install dependencies
+COPY ../frontend/package*.json ./
+RUN npm ci
+
+# Copy source and build the frontend
+COPY ../frontend .
+RUN npm run build
+
+
+# ============================
+# Stage 2 — Build Backend
+# ============================
 FROM node:18-alpine
 
-# Set working directory in container
+# Set working directory
 WORKDIR /app
 
-# Create app user for security
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+# Create app user
+RUN addgroup -g 1001 -S nodejs \
+ && adduser -S nodejs -u 1001
 
-# Copy package files first (for better caching)
+# Copy backend package files first
 COPY package*.json ./
 
-# Install dependencies
+# Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy backend source code
 COPY . .
 
-# Create data directory with proper permissions
+# Copy frontend build output from previous stage
+COPY --from=build-frontend /frontend/build ./public
+
+# Create data directory
 RUN mkdir -p /app/data && \
     chown -R nodejs:nodejs /app && \
     chmod 755 /app/data
 
-# Create volume for data persistence
+# Set volume for persistent data
 VOLUME ["/app/data"]
 
-# Switch to non-root user
+# Use non-root user
 USER nodejs
 
-# Expose port
+# Expose backend port
 EXPOSE 5000
 
-# Start the application
+# Start app
 CMD ["npm", "start"]
